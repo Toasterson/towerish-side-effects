@@ -20,6 +20,9 @@ concurrency:
 
 jobs:
   build:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}  
     runs-on: ubuntu-latest
     steps:
       - name: Setup | Checkout
@@ -33,7 +36,7 @@ jobs:
       - name: Build | Trunk
         run: |
           cd launchers/wasm
-          trunk build --release --public-url ${{ env.PUBLIC_URL }}
+          trunk build --release --public-url ${{ env.url }}
 
       - name: Post Build | Upload dist
         uses: actions/upload-artifact@v3
@@ -56,7 +59,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
         with:
-          # Upload entire repository
+          # Upload dist folder
           path: './dist/'
       - name: Deploy to GitHub Pages
         id: deployment
