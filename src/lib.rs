@@ -1,6 +1,14 @@
+mod camera;
+mod init;
+mod world;
+
 use bevy::{prelude::*, window::WindowMode};
 
-pub const LAUNCHER_TITLE: &str = "Bevy Shell - Template";
+pub use camera::*;
+pub use init::*;
+pub use world::*;
+
+pub const LAUNCHER_TITLE: &str = "Towering Sideffects";
 
 pub fn app(fullscreen: bool) -> App {
     let mode = if fullscreen {
@@ -19,14 +27,9 @@ pub fn app(fullscreen: bool) -> App {
         }),
         ..default()
     }))
-    .add_startup_system(load_icon);
+    .insert_resource(ClearColor(Color::rgb(0.2, 0.2, 0.2)))
+    .add_plugin(InitializationPlugin)
+    .add_plugin(CameraPlugin)
+    .add_plugin(WorldPlugin);
     app
-}
-
-fn load_icon(mut commands: Commands, asset_server: Res<AssetServer>) {
-    commands.spawn(Camera2dBundle::default());
-    commands.spawn(SpriteBundle {
-        texture: asset_server.load("bevy.png"),
-        ..default()
-    });
 }
