@@ -2,6 +2,11 @@
 name = "towerish_side_effects"
 version = "0.1.0"
 edition = "2021"
+publish = false
+
+[workspace.metadata.release]
+publish = false
+tag-prefix = "v"
 
 [workspace]
 members = [
