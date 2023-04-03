@@ -1,7 +1,6 @@
 name: Release WASM (GitHub Pages)
 on:
-  push:
-    tags: ["v*"]
+  release:
 
 env:
   PUBLIC_URL: /towerish-side-effects/

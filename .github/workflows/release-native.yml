@@ -1,7 +1,6 @@
 name: Release Native
 on:
-  push:
-    tags: ["v*"]
+  release:
 
 env:
   RELEASE_NAME: towerish_side_effects
