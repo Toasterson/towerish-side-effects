@@ -36,8 +36,16 @@ fn camera_controls(
     left.y = 0.0;
     left = left.normalize();
 
-    let speed = 6.0;
-    let rotate_speed = 0.6;
+    let speed = if keyboard.pressed(KeyCode::LShift) {
+        15.0
+    } else {
+        7.0
+    };
+    let rotate_speed = if keyboard.pressed(KeyCode::LShift) {
+        1.4
+    } else {
+        0.6
+    };
 
     if keyboard.pressed(KeyCode::W) {
         camera.translation += forward * time.delta_seconds() * speed;
