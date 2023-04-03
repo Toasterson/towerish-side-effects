@@ -1,9 +1,6 @@
 use bevy::{pbr::NotShadowCaster, prelude::*};
 use bevy_mod_picking::*;
-use bevy_rapier3d::{
-    prelude::{NoUserData, RapierConfiguration, RapierPhysicsPlugin},
-    render::RapierDebugRenderPlugin,
-};
+use bevy_rapier3d::prelude::RapierConfiguration;
 
 use crate::GameAssets;
 
@@ -24,9 +21,7 @@ pub struct WorldPlugin;
 
 impl Plugin for WorldPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
-            .add_plugin(RapierDebugRenderPlugin::default())
-            .add_startup_system(spawn_basic_scene);
+        app.add_startup_system(spawn_basic_scene);
     }
 }
 
@@ -79,9 +74,7 @@ fn spawn_basic_scene(
 
                 commands
                     .spawn(SpatialBundle::from_transform(Transform::from_xyz(
-                        coords.x,
-                        coords.y + 0.8,
-                        coords.z,
+                        0.0, 0.8, 0.0,
                     )))
                     .insert(Name::new(format!("Tower_Base_{}", idx)))
                     .insert(meshes.add(shape::Capsule::default().into()))
