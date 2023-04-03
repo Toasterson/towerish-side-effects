@@ -6,7 +6,6 @@ publish = false
 
 [workspace.metadata.release]
 publish = false
-tag-prefix = "v"
 
 [workspace]
 members = [
