@@ -27,10 +27,9 @@ opt-level = 'z'
 lto = true
 
 [dependencies]
-anyhow = "1.0.70"
 bevy = "0.10"
 bevy-inspector-egui = "0.18.3"
 bevy_mod_picking = "0.12.0"
-bevy_rapier3d = { version = "0.21.0", features = ["parallel"] }
+bevy_rapier3d = { version = "0.21.0" }
 strum = { version = "0.24.1", features = ["derive"] }
 
