@@ -41,9 +41,12 @@ pub fn app(fullscreen: bool) -> App {
     .add_plugin(CameraPlugin)
     .add_plugin(WorldPlugin)
     .add_plugin(TowerPlugin)
-    .add_plugin(WorldInspectorPlugin::new())
     .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
-    .add_plugin(RapierDebugRenderPlugin::default())
     .add_plugins(DefaultPickingPlugins);
+
+    if cfg!(debug_assertions) {
+        app.add_plugin(WorldInspectorPlugin::new());
+        // app.add_plugin(RapierDebugRenderPlugin::default());
+    }
     app
 }
