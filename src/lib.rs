@@ -10,13 +10,13 @@ pub fn app(fullscreen: bool) -> App {
     };
     let mut app = App::new();
     app.add_plugins(DefaultPlugins.set(WindowPlugin {
-        window: WindowDescriptor {
+        primary_window: Some(Window {
             title: LAUNCHER_TITLE.to_string(),
             canvas: Some("#bevy".to_string()),
             fit_canvas_to_parent: true,
             mode,
             ..default()
-        },
+        }),
         ..default()
     }))
     .add_startup_system(load_icon);

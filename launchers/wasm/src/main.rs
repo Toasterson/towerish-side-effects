@@ -1,7 +1,7 @@
 use bevy::prelude::*;
-use game::LAUNCHER_TITLE;
 use stylist::yew::styled_component;
 use stylist::{css, global_style};
+use towerish_side_effects::LAUNCHER_TITLE;
 use yew::prelude::*;
 
 fn set_window_title(title: &str) {
@@ -54,7 +54,7 @@ fn main() {
     // Mount the DOM
     yew::start_app::<Root>();
     // Start the Bevy App
-    let mut app = game::app(false);
+    let mut app = towerish_side_effects::app(false);
     info!("Starting launcher: WASM");
     app.run();
 }

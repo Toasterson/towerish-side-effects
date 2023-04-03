@@ -1,5 +1,5 @@
 [package]
-name = "game"
+name = "towerish_side_effects"
 version = "0.1.0"
 edition = "2021"
 
@@ -11,6 +11,7 @@ members = [
 exclude = [
     "launchers/ios" # Special handling required
 ]
+resolver = "2"
 
 [profile.dev]
 opt-level = 1
@@ -22,6 +23,5 @@ opt-level = 'z'
 lto = true
 
 [dependencies]
-bevy = "0.9.1"
-image = "0.24.5"
-winit = "0.28.1"
+bevy = "0.10"
+

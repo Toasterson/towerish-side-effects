@@ -1,9 +1,14 @@
-use bevy::{prelude::*, window::WindowId, winit::WinitWindows};
+use bevy::{prelude::*, window::PrimaryWindow, winit::WinitWindows};
 use std::io::Cursor;
 use winit::window::Icon;
 
-fn set_window_icon(windows: NonSend<WinitWindows>) {
-    let window = windows.get_window(WindowId::primary()).expect("no window");
+fn set_window_icon(
+    primary_window: Query<Entity, With<PrimaryWindow>>,
+    windows: NonSend<WinitWindows>,
+) {
+    let window = windows
+        .get_window(primary_window.single())
+        .expect("no window");
     let (icon_rgba, icon_width, icon_height) = {
         let icon_buf = Cursor::new(include_bytes!("../static/appicon.png"));
         let rgba = image::load(icon_buf, image::ImageFormat::Png)
@@ -20,7 +25,7 @@ fn set_window_icon(windows: NonSend<WinitWindows>) {
 }
 
 fn main() {
-    let mut app = game::app(false);
+    let mut app = towerish_side_effects::app(false);
 
     info!("Starting launcher: Native");
     app.add_startup_system(set_window_icon);
