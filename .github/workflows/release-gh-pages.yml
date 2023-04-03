@@ -18,11 +18,12 @@ concurrency:
   group: "pages"
   cancel-in-progress: false
 
+
+
 jobs:
   build:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}  
+    env:
+      PUBLIC_URL: '/towerish-side-effects/'
     runs-on: ubuntu-latest
     steps:
       - name: Setup | Checkout
@@ -36,7 +37,7 @@ jobs:
       - name: Build | Trunk
         run: |
           cd launchers/wasm
-          trunk build --release --public-url ${{ env.url }}
+          trunk build --release --public-url ${{ env.PUBLIC_URL }}
 
       - name: Post Build | Upload dist
         uses: actions/upload-artifact@v3
