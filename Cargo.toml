@@ -1,0 +1,27 @@
+[package]
+name = "game"
+version = "0.1.0"
+edition = "2021"
+
+[workspace]
+members = [
+    "launchers/wasm",
+    "launchers/native",
+]
+exclude = [
+    "launchers/ios" # Special handling required
+]
+
+[profile.dev]
+opt-level = 1
+
+[profile.release]
+panic = 'abort'
+codegen-units = 1
+opt-level = 'z'
+lto = true
+
+[dependencies]
+bevy = "0.9.1"
+image = "0.24.5"
+winit = "0.28.1"
