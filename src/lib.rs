@@ -1,4 +1,5 @@
 mod camera;
+mod debug;
 mod init;
 mod tower;
 mod world;
@@ -11,6 +12,8 @@ use bevy_rapier3d::{
     prelude::{NoUserData, RapierPhysicsPlugin},
     render::RapierDebugRenderPlugin,
 };
+use debug::debug_plugin;
+use seldom_fn_plugin::FnPluginExt;
 
 pub use camera::*;
 pub use init::*;
@@ -46,6 +49,7 @@ pub fn app(fullscreen: bool) -> App {
 
     if cfg!(debug_assertions) {
         app.add_plugin(WorldInspectorPlugin::new());
+        app.fn_plugin(debug_plugin);
         // app.add_plugin(RapierDebugRenderPlugin::default());
     }
     app
