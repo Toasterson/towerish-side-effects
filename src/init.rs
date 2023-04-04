@@ -1,19 +1,19 @@
-use bevy::prelude::*;
+use bevy::{gltf::Gltf, prelude::*};
 
 #[derive(Resource)]
 pub struct GameAssets {
     font: Handle<Font>,
-    map: Handle<Scene>,
+    map: Handle<Gltf>,
     tower_base_bright: Handle<Scene>,
     tower_base_purple: Handle<Scene>,
     tower_base_bad: Handle<Scene>,
+    capsule_shape: Handle<Mesh>,
 }
 
 pub enum Scenes {
     TowerBaseBright,
     TowerBasePurple,
     TowerBaseBad,
-    Map,
 }
 
 impl GameAssets {
@@ -22,12 +22,19 @@ impl GameAssets {
             Scenes::TowerBaseBright => self.tower_base_bright.clone(),
             Scenes::TowerBasePurple => self.tower_base_purple.clone(),
             Scenes::TowerBaseBad => self.tower_base_bad.clone(),
-            Scenes::Map => self.map.clone(),
         }
     }
 
     pub fn font(&self) -> Handle<Font> {
         self.font.clone()
+    }
+
+    pub fn map(&self) -> &Handle<Gltf> {
+        &self.map
+    }
+
+    pub fn get_capsule_shape(&self) -> &Handle<Mesh> {
+        &self.capsule_shape
     }
 }
 
@@ -41,12 +48,18 @@ impl Plugin for InitializationPlugin {
     }
 }
 
-fn asset_loading(mut commands: Commands, assets: Res<AssetServer>) {
+fn asset_loading(
+    mut commands: Commands,
+    assets: Res<AssetServer>,
+    mut meshes: ResMut<Assets<Mesh>>,
+) {
+    let capsule_shape_handle = meshes.add(shape::Capsule::default().into());
     commands.insert_resource(GameAssets {
         font: assets.load("QuattrocentoSans-Bold.ttf"),
-        map: assets.load("map_a_map_only.glb#Scene0"),
+        map: assets.load("map_a_map_only.glb"),
         tower_base_bright: assets.load("tower_base_a_bright.glb#Scene0"),
         tower_base_purple: assets.load("tower_base_a_purple.glb#Scene0"),
         tower_base_bad: assets.load("tower_base_bad.glb#Scene0"),
+        capsule_shape: capsule_shape_handle,
     });
 }

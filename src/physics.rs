@@ -1,0 +1,51 @@
+use bevy::prelude::*;
+use bevy_rapier3d::prelude::*;
+
+#[derive(Bundle)]
+pub struct PhysicsBundle {
+    flags: ActiveEvents,
+    active_collition_types: ActiveCollisionTypes,
+    collider: Collider,
+    colliding_entities: CollidingEntities,
+    rigid_body: RigidBody,
+    rotation_contraint: LockedAxes,
+    velocity: Velocity,
+}
+
+impl PhysicsBundle {
+    pub fn moving_entity(size: Vec3) -> Self {
+        Self {
+            flags: ActiveEvents::COLLISION_EVENTS,
+            active_collition_types: ActiveCollisionTypes::default()
+                | ActiveCollisionTypes::KINEMATIC_KINEMATIC,
+            collider: Collider::cuboid(size.x / 2., size.y / 2., size.z / 2.),
+            colliding_entities: CollidingEntities::default(),
+            rigid_body: RigidBody::Dynamic,
+            rotation_contraint: LockedAxes::ROTATION_LOCKED,
+            velocity: Velocity::zero(),
+        }
+    }
+    pub fn from_mesh(mesh: &Mesh) -> Self {
+        let collider =
+            Collider::from_bevy_mesh(mesh, &ComputedColliderShape::TriMesh)
+                .unwrap();
+        //collider.set_scale(Vec3::new(2.0, 2.0, 2.0), 1);
+        Self {
+            flags: ActiveEvents::COLLISION_EVENTS,
+            active_collition_types: ActiveCollisionTypes::default()
+                | ActiveCollisionTypes::KINEMATIC_KINEMATIC,
+            collider,
+            colliding_entities: CollidingEntities::default(),
+            rigid_body: RigidBody::Dynamic,
+            rotation_contraint: LockedAxes::ROTATION_LOCKED,
+            velocity: Velocity::zero(),
+        }
+    }
+
+    pub fn make_kinematic(mut self) -> Self {
+        self.rigid_body = RigidBody::KinematicPositionBased;
+        self
+    }
+}
+
+pub fn physics_plugin(_app: &mut App) {}
