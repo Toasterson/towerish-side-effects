@@ -2,6 +2,8 @@ mod camera;
 mod debug;
 mod graphics;
 mod init;
+mod physics;
+mod projectile;
 mod tower;
 mod world;
 
@@ -19,6 +21,8 @@ use seldom_fn_plugin::FnPluginExt;
 
 pub use camera::*;
 pub use init::*;
+pub use physics::*;
+pub use projectile::*;
 pub use tower::*;
 pub use world::*;
 
@@ -46,14 +50,16 @@ pub fn app(fullscreen: bool) -> App {
     .add_plugin(CameraPlugin)
     .add_plugin(WorldPlugin)
     .add_plugin(TowerPlugin)
+    .add_plugin(ProjectilePlugin)
     .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
     .add_plugins(DefaultPickingPlugins)
-    .fn_plugin(graphics_plugin);
+    .fn_plugin(graphics_plugin)
+    .fn_plugin(physics_plugin);
 
     if cfg!(debug_assertions) {
         app.add_plugin(WorldInspectorPlugin::new());
         app.fn_plugin(debug_plugin);
-        // app.add_plugin(RapierDebugRenderPlugin::default());
+        app.add_plugin(RapierDebugRenderPlugin::default());
     }
     app
 }
