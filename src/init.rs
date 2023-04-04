@@ -32,7 +32,6 @@ impl GameAssets {
     pub fn map(&self) -> &Handle<Gltf> {
         &self.map
     }
-
     pub fn get_capsule_shape(&self) -> &Handle<Mesh> {
         &self.capsule_shape
     }
@@ -56,7 +55,7 @@ fn asset_loading(
     let capsule_shape_handle = meshes.add(shape::Capsule::default().into());
     commands.insert_resource(GameAssets {
         font: assets.load("QuattrocentoSans-Bold.ttf"),
-        map: assets.load("map_a_map_only.glb"),
+        map: assets.load("map_a.glb"),
         tower_base_bright: assets.load("tower_base_a_bright.glb#Scene0"),
         tower_base_purple: assets.load("tower_base_a_purple.glb#Scene0"),
         tower_base_bad: assets.load("tower_base_bad.glb#Scene0"),

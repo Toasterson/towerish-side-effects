@@ -56,10 +56,10 @@ pub fn app(fullscreen: bool) -> App {
     .fn_plugin(graphics_plugin)
     .fn_plugin(physics_plugin);
 
-    //    if cfg!(debug_assertions) {
-    app.add_plugin(WorldInspectorPlugin::new());
-    app.fn_plugin(debug_plugin);
-    app.add_plugin(RapierDebugRenderPlugin::default());
-    //  }
+    if cfg!(debug_assertions) {
+        app.add_plugin(WorldInspectorPlugin::new());
+        app.fn_plugin(debug_plugin);
+        app.add_plugin(RapierDebugRenderPlugin::default());
+    }
     app
 }

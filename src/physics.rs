@@ -46,6 +46,11 @@ impl PhysicsBundle {
         self.rigid_body = RigidBody::KinematicPositionBased;
         self
     }
+
+    pub fn make_fixed(mut self) -> Self {
+        self.rigid_body = RigidBody::Fixed;
+        self
+    }
 }
 
 pub fn physics_plugin(_app: &mut App) {}

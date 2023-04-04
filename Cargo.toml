@@ -39,4 +39,5 @@ bevy_hanabi = { version = "0.6", optional = true }
 bevy_editor_pls = "0.4"
 bevy-vfx-bag = "0.2"
 seldom_fn_plugin = "0.3"
+anyhow = "1.0.70"
 

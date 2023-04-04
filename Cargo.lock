@@ -4150,6 +4150,7 @@ dependencies = [
 name = "towerish_side_effects"
 version = "0.1.1"
 dependencies = [
+ "anyhow",
  "bevy",
  "bevy-inspector-egui",
  "bevy-vfx-bag",
