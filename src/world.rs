@@ -42,7 +42,7 @@ fn spawn_basic_scene(
                 shadows_enabled: true,
                 ..default()
             },
-            transform: Transform::from_xyz(-5.0, 60.0, -5.0),
+            transform: Transform::from_xyz(-5.0, 10.0, -5.0),
             ..default()
         })
         .insert(Name::new("Sun"));
@@ -51,6 +51,14 @@ fn spawn_basic_scene(
         materials.add(Color::rgba(0.3, 0.5, 0.3, 0.3).into());
     let selected_collider_color =
         materials.add(Color::rgba(0.3, 0.9, 0.3, 0.9).into());
+
+    commands
+        .spawn(PbrBundle {
+            mesh: meshes.add(shape::Plane::from_size(15.0).into()),
+            material: materials.add(Color::rgb(0.3, 0.3, 0.3).into()),
+            ..default()
+        })
+        .insert(Name::new("Floor"));
 
     commands
         .spawn(SceneBundle {
