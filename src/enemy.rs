@@ -96,6 +96,7 @@ fn route_collision_detection(
     for (colliding_entities, proxy, gt) in colliding_entities_query.iter_mut() {
         for enemy_entity in enemy_query.iter() {
             if colliding_entities.contains(enemy_entity) {
+                info!("Collision of {:?} with {:?}", enemy_entity, proxy);
                 ev_find_next.send(FindNextWaypointEvent(
                     enemy_entity,
                     proxy.clone(),
@@ -122,6 +123,7 @@ fn find_next_waypoint_node(
                 ))
             });
         if let Some(wp) = closest {
+            info!("Replacing Waypint in enemy: {:?}", ev.0);
             commands.entity(ev.0).remove::<Waypoint>().insert(Waypoint {
                 coords: wp.1.compute_transform(),
             });

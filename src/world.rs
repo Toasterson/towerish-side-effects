@@ -52,7 +52,7 @@ impl FromStr for TowerBase {
     }
 }
 
-#[derive(Reflect, Component, PartialEq, Eq, Clone)]
+#[derive(Debug, Reflect, Component, PartialEq, Eq, Clone)]
 pub struct Proxy {
     pub route_id: i32,
     pub node_id: i32,
@@ -60,10 +60,10 @@ pub struct Proxy {
     pub movement_type: MovementType,
 }
 
-#[derive(Reflect, Component)]
+#[derive(Debug, Reflect, Component)]
 pub struct Route {}
 
-#[derive(Reflect, PartialEq, Eq, Clone)]
+#[derive(Debug, Reflect, PartialEq, Eq, Clone)]
 pub enum ProxyKind {
     Route,
     Portal,
@@ -78,7 +78,7 @@ impl Display for ProxyKind {
     }
 }
 
-#[derive(Reflect, PartialEq, Eq, Clone)]
+#[derive(Debug, Reflect, PartialEq, Eq, Clone)]
 pub enum MovementType {
     Walking,
     Falling,
@@ -151,28 +151,21 @@ fn handle_map_spawn(
                     let capsule_handle = assets.get_capsule_shape();
 
                     commands
-                        .spawn(SceneBundle {
-                            scene: map.default_scene.clone().unwrap(),
-                            ..Default::default()
-                        })
-                        .insert(Name::new("Map"))
-                        .insert(
-                            PhysicsBundle::from_mesh(
-                                map_mesh,
-                                &ComputedColliderShape::ConvexDecomposition(
-                                    VHACDParameters::default(),
-                                ),
-                            )
-                            .make_fixed(),
-                        )
+                        .spawn((
+                            SceneBundle {
+                                scene: map.default_scene.clone().unwrap(),
+                                ..Default::default()
+                            },
+                            Name::new("Map"),
+                        ))
                         .with_children(|commands| {
                             for (name, node_handle) in map.named_nodes.iter() {
                                 if name.to_lowercase().starts_with("tower") {
                                     let tower_base =
                                         TowerBase::from_str(name).unwrap();
                                     let node = nodes.get(node_handle).unwrap();
-                                    commands
-                                        .spawn(PbrBundle {
+                                    commands.spawn((
+                                        PbrBundle {
                                             mesh: capsule_handle.clone(),
                                             material: default_collider_color
                                                 .clone(),
@@ -187,15 +180,12 @@ fn handle_map_spawn(
                                                     1.5, 1.5, 1.5,
                                                 )),
                                             ..Default::default()
-                                        })
-                                        .insert(Name::new(format!(
+                                        },
+                                        Name::new(format!(
                                             "Tower_Base_{}",
                                             tower_base
-                                        )))
-                                        .insert(
-                                            assets.get_capsule_shape().clone(),
-                                        )
-                                        .insert(Highlighting {
+                                        )),
+                                        Highlighting {
                                             initial: default_collider_color
                                                 .clone(),
                                             hovered: Some(
@@ -210,11 +200,11 @@ fn handle_map_spawn(
                                                 tower_base_selected_color
                                                     .clone(),
                                             ),
-                                        })
-                                        .insert(default_collider_color.clone())
-                                        .insert(NotShadowCaster)
-                                        .insert(PickableBundle::default())
-                                        .insert(tower_base);
+                                        },
+                                        NotShadowCaster,
+                                        PickableBundle::default(),
+                                        tower_base,
+                                    ));
                                 } else if name
                                     .to_lowercase()
                                     .starts_with("proxy")
@@ -224,19 +214,24 @@ fn handle_map_spawn(
                                     let node = nodes.get(node_handle).unwrap();
 
                                     if matches!(proxy.kind, ProxyKind::Route) {
-                                        commands
-                                            .spawn(PbrBundle {
+                                        commands.spawn((
+                                            PbrBundle {
                                                 mesh: capsule_handle.clone(),
                                                 material: route_color.clone(),
                                                 transform: node.transform,
                                                 ..Default::default()
-                                            })
-                                            .insert(Name::new(format!(
+                                            },
+                                            Name::new(format!(
                                                 "Proxy_{}",
                                                 proxy
-                                            )))
-                                            .insert(proxy.clone())
-                                            .insert(Route {});
+                                            )),
+                                            proxy.clone(),
+                                            Route {},
+                                            PhysicsBundle::moving_entity(
+                                                Vec3::new(1.0, 1.0, 1.0),
+                                            )
+                                            .make_fixed(),
+                                        ));
                                     }
                                 } else if name
                                     .to_lowercase()
