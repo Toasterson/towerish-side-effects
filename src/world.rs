@@ -38,7 +38,9 @@ fn spawn_basic_scene(
     commands
         .spawn(PointLightBundle {
             point_light: PointLight {
-                intensity: 1600.0,
+                intensity: 4000.0,
+                range: 10000.,
+                radius: 10.,
                 shadows_enabled: true,
                 ..default()
             },
@@ -56,6 +58,7 @@ fn spawn_basic_scene(
         .spawn(PbrBundle {
             mesh: meshes.add(shape::Plane::from_size(15.0).into()),
             material: materials.add(Color::rgb(0.3, 0.3, 0.3).into()),
+            transform: Transform::from_xyz(0., -15., 0.),
             ..default()
         })
         .insert(Name::new("Floor"));
@@ -81,9 +84,9 @@ fn spawn_basic_scene(
                 };
 
                 commands
-                    .spawn(SpatialBundle::from_transform(Transform::from_xyz(
-                        0.0, 0.8, 0.0,
-                    )))
+                    .spawn(SpatialBundle::from_transform(
+                        Transform::from_translation(*coords),
+                    ))
                     .insert(Name::new(format!("Tower_Base_{}", idx)))
                     .insert(meshes.add(shape::Capsule::default().into()))
                     .insert(Highlighting {
@@ -96,13 +99,18 @@ fn spawn_basic_scene(
                     .insert(NotShadowCaster)
                     .insert(PickableBundle::default())
                     .with_children(|commands| {
-                        commands.spawn(SceneBundle {
-                            scene: handle,
-                            transform: Transform::from_xyz(
-                                coords.x, coords.y, coords.z,
-                            ),
-                            ..Default::default()
-                        });
+                        commands
+                            .spawn(SceneBundle {
+                                scene: handle,
+                                transform: Transform::from_xyz(
+                                    coords.x, coords.y, coords.z,
+                                ),
+                                ..Default::default()
+                            })
+                            .insert(Name::new(format!(
+                                "Tower_Base_Child_{}",
+                                idx
+                            )));
                     });
             }
         });
