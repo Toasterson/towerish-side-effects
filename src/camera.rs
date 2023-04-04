@@ -2,14 +2,10 @@ use bevy::{input::mouse::MouseWheel, prelude::*};
 use bevy_atmosphere::prelude::*;
 use bevy_mod_picking::PickingCameraBundle;
 
-pub struct CameraPlugin;
-
-impl Plugin for CameraPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_plugin(AtmospherePlugin);
-        app.add_startup_system(spawn_camera)
-            .add_system(camera_controls);
-    }
+pub fn camera_plugin(app: &mut App) {
+    app.add_plugin(AtmospherePlugin);
+    app.add_startup_system(spawn_camera)
+        .add_system(camera_controls);
 }
 
 fn spawn_camera(mut commands: Commands) {

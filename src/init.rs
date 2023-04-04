@@ -37,14 +37,8 @@ impl GameAssets {
     }
 }
 
-pub struct InitializationPlugin;
-
-impl Plugin for InitializationPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_startup_system(
-            asset_loading.in_base_set(StartupSet::PreStartup),
-        );
-    }
+pub fn initialization_plugin(app: &mut App) {
+    app.add_startup_system(asset_loading.in_base_set(StartupSet::PreStartup));
 }
 
 fn asset_loading(

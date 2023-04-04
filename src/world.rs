@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use crate::{GameAssets, PhysicsBundle};
+use crate::{GameAssets, PhysicsBundle, Portal};
 use bevy::{
     gltf::{Gltf, GltfMesh, GltfNode},
     pbr::NotShadowCaster,
@@ -52,28 +52,33 @@ impl FromStr for TowerBase {
     }
 }
 
-#[derive(Reflect, Component)]
+#[derive(Reflect, Component, PartialEq, Eq, Clone)]
 pub struct Proxy {
-    route_id: i32,
-    node_id: i32,
-    kind: ProxyKind,
-    movement_type: MovementType,
+    pub route_id: i32,
+    pub node_id: i32,
+    pub kind: ProxyKind,
+    pub movement_type: MovementType,
 }
 
-#[derive(Reflect)]
+#[derive(Reflect, Component)]
+pub struct Route {}
+
+#[derive(Reflect, PartialEq, Eq, Clone)]
 pub enum ProxyKind {
     Route,
+    Portal,
 }
 
 impl Display for ProxyKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ProxyKind::Route => write!(f, "route"),
+            ProxyKind::Portal => write!(f, "portal"),
         }
     }
 }
 
-#[derive(Reflect)]
+#[derive(Reflect, PartialEq, Eq, Clone)]
 pub enum MovementType {
     Walking,
     Falling,
@@ -106,15 +111,12 @@ impl Display for Proxy {
     }
 }
 
-pub struct WorldPlugin;
-
-impl Plugin for WorldPlugin {
-    fn build(&self, app: &mut App) {
-        app.register_type::<Proxy>()
-            .register_type::<TowerBase>()
-            .add_startup_system(spawn_basic_scene)
-            .add_system(handle_map_spawn);
-    }
+pub fn world_plugin(app: &mut App) {
+    app.register_type::<Proxy>()
+        .register_type::<TowerBase>()
+        .register_type::<Route>()
+        .add_startup_system(spawn_basic_scene)
+        .add_system(handle_map_spawn);
 }
 
 fn handle_map_spawn(
@@ -154,7 +156,15 @@ fn handle_map_spawn(
                             ..Default::default()
                         })
                         .insert(Name::new("Map"))
-                        .insert(PhysicsBundle::from_mesh(map_mesh).make_fixed())
+                        .insert(
+                            PhysicsBundle::from_mesh(
+                                map_mesh,
+                                &ComputedColliderShape::ConvexDecomposition(
+                                    VHACDParameters::default(),
+                                ),
+                            )
+                            .make_fixed(),
+                        )
                         .with_children(|commands| {
                             for (name, node_handle) in map.named_nodes.iter() {
                                 if name.to_lowercase().starts_with("tower") {
@@ -212,18 +222,42 @@ fn handle_map_spawn(
                                     let proxy = Proxy::from_str(name).unwrap();
 
                                     let node = nodes.get(node_handle).unwrap();
-                                    commands
-                                        .spawn(PbrBundle {
-                                            mesh: capsule_handle.clone(),
-                                            material: route_color.clone(),
+
+                                    if matches!(proxy.kind, ProxyKind::Route) {
+                                        commands
+                                            .spawn(PbrBundle {
+                                                mesh: capsule_handle.clone(),
+                                                material: route_color.clone(),
+                                                transform: node.transform,
+                                                ..Default::default()
+                                            })
+                                            .insert(Name::new(format!(
+                                                "Proxy_{}",
+                                                proxy
+                                            )))
+                                            .insert(proxy.clone())
+                                            .insert(Route {});
+                                    }
+                                } else if name
+                                    .to_lowercase()
+                                    .starts_with("portal")
+                                {
+                                    let node = nodes.get(node_handle).unwrap();
+                                    commands.spawn((
+                                        SpatialBundle {
                                             transform: node.transform,
                                             ..Default::default()
-                                        })
-                                        .insert(Name::new(format!(
-                                            "Proxy_{}",
-                                            proxy
-                                        )))
-                                        .insert(proxy);
+                                        },
+                                        Name::new("Portal"),
+                                        Portal::new(),
+                                        Proxy {
+                                            route_id: 0,
+                                            node_id: -1,
+                                            kind: ProxyKind::Portal,
+                                            movement_type:
+                                                MovementType::Walking,
+                                        },
+                                    ));
                                 }
                             }
                         });

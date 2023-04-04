@@ -7,18 +7,21 @@ use crate::GameAssets;
 #[derive(Component)]
 pub struct TowerUIRoot;
 
+#[derive(Reflect, Component, Default)]
+#[reflect(Component)]
+pub struct Tower {
+    pub shooting_timer: Timer,
+    pub bullet_offset: Vec3,
+}
+
 #[derive(Reflect, Component, EnumIter, EnumDisplay, Copy, Clone)]
 pub enum TowerType {
     Test,
 }
 
-pub struct TowerPlugin;
-
-impl Plugin for TowerPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_system(create_ui_on_selection)
-            .add_system(tower_button_clicked);
-    }
+pub fn tower_plugin(app: &mut App) {
+    app.add_system(create_ui_on_selection)
+        .add_system(tower_button_clicked);
 }
 
 fn create_ui_on_selection(
@@ -44,24 +47,50 @@ fn create_ui_on_selection(
     }
 }
 
+pub fn spawn_tower(
+    commands: &mut Commands,
+    assets: &GameAssets,
+    position: Vec3,
+    tt: TowerType,
+) -> Entity {
+    commands
+        .spawn(SpatialBundle::from_transform(Transform::from_translation(
+            position,
+        )))
+        .insert(Name::new("Default Tower"))
+        .insert(Tower {
+            shooting_timer: Timer::from_seconds(0.5, TimerMode::Repeating),
+            bullet_offset: Vec3::new(0.0, 1.2, 0.0),
+        })
+        .insert(tt)
+        .with_children(|commands| {
+            commands.spawn(PbrBundle {
+                mesh: assets.get_capsule_shape().clone(),
+                transform: Transform::from_xyz(0.0, -0.8, 0.0)
+                    .with_scale(Vec3::new(1.5, 1.5, 1.5)),
+                ..Default::default()
+            });
+        })
+        .id()
+}
+
 fn tower_button_clicked(
     interaction: Query<(&Interaction, &TowerType), Changed<Interaction>>,
-    mut _commands: Commands,
+    mut commands: Commands,
     selection: Query<(Entity, &Selection, &Transform)>,
-    _assets: Res<GameAssets>,
+    assets: Res<GameAssets>,
 ) {
     for (interaction, tower_type) in &interaction {
         if matches!(interaction, Interaction::Clicked) {
-            for (_entity, selection, _transform) in &selection {
+            for (entity, selection, transform) in &selection {
                 if selection.selected() {
-                    info!("Tower button {} clicked", tower_type.to_string());
-                    //commands.entity(entity).despawn_recursive();
-                    //crate::tower::spawn_tower(
-                    //    &mut commands,
-                    //    &assets,
-                    //    transform.translation,
-                    //    *tower_type,
-                    //);
+                    commands.entity(entity).despawn_recursive();
+                    spawn_tower(
+                        &mut commands,
+                        &assets,
+                        transform.translation,
+                        *tower_type,
+                    );
                 }
             }
         }
@@ -113,6 +142,7 @@ fn create_ui(commands: &mut Commands, assets: &GameAssets) {
                                     Val::Percent(100.0),
                                     Val::Percent(100.0),
                                 ),
+                                align_self: AlignSelf::Center,
                                 margin: UiRect::all(Val::Auto),
                                 ..Default::default()
                             },

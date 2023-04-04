@@ -25,10 +25,11 @@ impl PhysicsBundle {
             velocity: Velocity::zero(),
         }
     }
-    pub fn from_mesh(mesh: &Mesh) -> Self {
-        let collider =
-            Collider::from_bevy_mesh(mesh, &ComputedColliderShape::TriMesh)
-                .unwrap();
+    pub fn from_mesh(
+        mesh: &Mesh,
+        collider_shape: &ComputedColliderShape,
+    ) -> Self {
+        let collider = Collider::from_bevy_mesh(mesh, collider_shape).unwrap();
         //collider.set_scale(Vec3::new(2.0, 2.0, 2.0), 1);
         Self {
             flags: ActiveEvents::COLLISION_EVENTS,
