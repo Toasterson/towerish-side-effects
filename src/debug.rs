@@ -2,10 +2,10 @@ use bevy::prelude::*;
 use bevy_prototype_debug_lines::{DebugLines, DebugLinesPlugin};
 
 pub fn debug_plugin(app: &mut App) {
+    // app.add_system(locate_lights);
     app.add_plugin(DebugLinesPlugin::with_depth_test(false)); // Change to have
                                                               // lines NOT show
                                                               // through geometry
-    app.add_system(locate_lights);
 }
 
 fn locate_lights(

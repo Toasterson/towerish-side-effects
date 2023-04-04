@@ -3,11 +3,11 @@ use bevy_vfx_bag::{post_processing::lut::Lut, BevyVfxBagPlugin};
 
 pub fn graphics_plugin(app: &mut App) {
     app.add_plugin(BevyVfxBagPlugin::default());
-    app.add_system(update);
+    // app.add_system(test_LUTs);
 }
 
 // Cycle through some preset LUTs.
-fn update(
+fn test_LUTs(
     mut choice: Local<usize>,
     mut commands: Commands,
     keyboard_input: Res<Input<KeyCode>>,
