@@ -1,7 +1,6 @@
-use bevy::{prelude::*, utils::FloatOrd};
-use bevy_rapier3d::prelude::CollidingEntities;
+use bevy::prelude::*;
 
-use crate::{GameAssets, PhysicsBundle, Proxy, Route};
+use crate::{pathmanager::PathManager, GameAssets, Proxy};
 
 #[derive(Reflect, Component)]
 pub struct Waypoint {
@@ -11,6 +10,18 @@ pub struct Waypoint {
 #[derive(Reflect, Component)]
 pub struct Enemy {
     pub speed: f32,
+}
+
+#[derive(Reflect, Component)]
+pub struct PathProgress {
+    path: Entity,
+    progress: f32,
+}
+
+impl PathProgress {
+    pub fn new(path: Entity) -> Self {
+        Self { path, progress: 0. }
+    }
 }
 
 #[derive(Reflect, Component)]
@@ -27,23 +38,35 @@ impl Portal {
 }
 
 pub fn enemy_plugin(app: &mut App) {
-    app.add_event::<FindNextWaypointEvent>()
-        .register_type::<Waypoint>()
+    app.register_type::<Waypoint>()
         .register_type::<Enemy>()
         .register_type::<Portal>()
-        .add_system(route_collision_detection)
-        .add_system(find_next_waypoint_node.after(route_collision_detection))
+        .register_type::<PathProgress>()
+        .register_type::<PathManager>()
+        .add_startup_system(example_setup)
         .add_system(enemy_spawner)
         .add_system(move_enemies.after(enemy_spawner));
+}
+
+fn example_setup(mut commands: Commands) {
+    commands.spawn((
+        (Name::new("Dummy Path")),
+        PathManager::new(vec![
+            Vec3::new(1., 5., 6.),
+            Vec3::new(10., 5., -10.),
+            Vec3::new(1., 5., 1.),
+        ]),
+    ));
 }
 
 fn enemy_spawner(
     mut commands: Commands,
     mut portal_query: Query<(&mut Portal, &Proxy, &GlobalTransform)>,
-    mut ev_find_next: EventWriter<FindNextWaypointEvent>,
+    paths: Query<Entity, With<PathManager>>,
     time: Res<Time>,
     assets: Res<GameAssets>,
 ) {
+    let path = paths.get_single().unwrap(); // def change this later
     for (mut portal, proxy, portal_pos) in &mut portal_query {
         portal.spawn_timer.tick(time.delta());
         if portal.spawn_timer.just_finished() {
@@ -58,75 +81,24 @@ fn enemy_spawner(
                         ..Default::default()
                     },
                     Name::new("Enemy"),
-                    Enemy { speed: 5.0 },
-                    PhysicsBundle::moving_entity(Vec3::new(1.0, 1.0, 1.0))
-                        .make_kinematic(),
+                    Enemy { speed: 3. },
+                    PathProgress::new(path),
                 ))
                 .id();
-            ev_find_next.send(FindNextWaypointEvent(
-                enemy,
-                proxy.clone(),
-                portal_pos.clone(),
-            ));
         }
     }
 }
 
 fn move_enemies(
-    mut enemies: Query<(&Enemy, &Waypoint, &mut Transform, &GlobalTransform)>,
+    mut enemies: Query<(&Enemy, &mut Transform, &mut PathProgress)>,
+    paths: Query<&PathManager>,
     time: Res<Time>,
 ) {
-    for (enemy, waypoint, mut transform, enemy_pos) in &mut enemies {
-        let direction = waypoint.coords.translation - enemy_pos.translation();
-        transform.translation +=
-            direction.normalize() * enemy.speed * time.delta_seconds();
-    }
-}
-
-pub struct FindNextWaypointEvent(Entity, Proxy, GlobalTransform);
-
-fn route_collision_detection(
-    mut ev_find_next: EventWriter<FindNextWaypointEvent>,
-    enemy_query: Query<Entity, With<Enemy>>,
-    mut colliding_entities_query: Query<
-        (&CollidingEntities, &Proxy, &GlobalTransform),
-        With<Route>,
-    >,
-) {
-    for (colliding_entities, proxy, gt) in colliding_entities_query.iter_mut() {
-        for enemy_entity in enemy_query.iter() {
-            if colliding_entities.contains(enemy_entity) {
-                info!("Collision of {:?} with {:?}", enemy_entity, proxy);
-                ev_find_next.send(FindNextWaypointEvent(
-                    enemy_entity,
-                    proxy.clone(),
-                    gt.clone(),
-                ));
-            }
-        }
-    }
-}
-
-fn find_next_waypoint_node(
-    mut commands: Commands,
-    mut ev_next_waypoint: EventReader<FindNextWaypointEvent>,
-    route_query: Query<(&Proxy, &GlobalTransform)>,
-) {
-    for ev in ev_next_waypoint.iter() {
-        let closest = route_query
-            .iter()
-            .filter(|(proxy, _)| proxy.node_id > ev.1.node_id)
-            .min_by_key(|(_, target_transform)| {
-                FloatOrd(Vec3::distance(
-                    target_transform.translation(),
-                    ev.2.translation(),
-                ))
-            });
-        if let Some(wp) = closest {
-            info!("Replacing Waypint in enemy: {:?}", ev.0);
-            commands.entity(ev.0).remove::<Waypoint>().insert(Waypoint {
-                coords: wp.1.compute_transform(),
-            });
-        }
+    for (enemy, mut transform, mut progress) in &mut enemies {
+        progress.progress += enemy.speed * time.delta_seconds();
+        transform.translation = paths
+            .get(progress.path)
+            .unwrap()
+            .get_position(progress.progress);
     }
 }

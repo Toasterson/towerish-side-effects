@@ -3,6 +3,7 @@ mod debug;
 mod enemy;
 mod graphics;
 mod init;
+mod pathmanager;
 mod physics;
 mod projectile;
 mod tower;
