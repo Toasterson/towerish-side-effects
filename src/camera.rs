@@ -1,21 +1,17 @@
-use bevy::prelude::*;
+use bevy::{input::mouse::MouseWheel, prelude::*};
 use bevy_atmosphere::prelude::*;
 use bevy_mod_picking::PickingCameraBundle;
 
-pub struct CameraPlugin;
-
-impl Plugin for CameraPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_plugin(AtmospherePlugin);
-        app.add_startup_system(spawn_camera)
-            .add_system(camera_controls);
-    }
+pub fn camera_plugin(app: &mut App) {
+    app.add_plugin(AtmospherePlugin);
+    app.add_startup_system(spawn_camera)
+        .add_system(camera_controls);
 }
 
 fn spawn_camera(mut commands: Commands) {
     commands
         .spawn(Camera3dBundle {
-            transform: Transform::from_xyz(-4.0, 10.0, 5.0)
+            transform: Transform::from_xyz(-6.0, 18.1, 16.5)
                 .looking_at(Vec3::ZERO, Vec3::Y),
             ..Default::default()
         })
@@ -26,6 +22,7 @@ fn spawn_camera(mut commands: Commands) {
 
 fn camera_controls(
     keyboard: Res<Input<KeyCode>>,
+    mut scroll_evr: EventReader<MouseWheel>,
     mut camera_query: Query<&mut Transform, With<Camera3d>>,
     time: Res<Time>,
 ) {
@@ -49,6 +46,20 @@ fn camera_controls(
     } else {
         0.6
     };
+    let scroll_speed = 32.0;
+
+    for ev in scroll_evr.iter() {
+        match ev.unit {
+            bevy::input::mouse::MouseScrollUnit::Line => {
+                camera.translation.y +=
+                    ev.y * time.delta_seconds() * scroll_speed
+            }
+            bevy::input::mouse::MouseScrollUnit::Pixel => {
+                camera.translation.y +=
+                    ev.y * time.delta_seconds() * scroll_speed
+            }
+        }
+    }
 
     if keyboard.pressed(KeyCode::W) {
         camera.translation += forward * time.delta_seconds() * speed;

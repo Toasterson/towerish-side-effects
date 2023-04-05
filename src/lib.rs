@@ -1,7 +1,10 @@
 mod camera;
 mod debug;
+mod enemy;
 mod graphics;
 mod init;
+mod physics;
+mod projectile;
 mod tower;
 mod world;
 
@@ -18,7 +21,10 @@ use graphics::graphics_plugin;
 use seldom_fn_plugin::FnPluginExt;
 
 pub use camera::*;
+pub use enemy::*;
 pub use init::*;
+pub use physics::*;
+pub use projectile::*;
 pub use tower::*;
 pub use world::*;
 
@@ -42,18 +48,21 @@ pub fn app(fullscreen: bool) -> App {
         ..default()
     }))
     .insert_resource(ClearColor(Color::rgb(0.2, 0.2, 0.2)))
-    .add_plugin(InitializationPlugin)
-    .add_plugin(CameraPlugin)
-    .add_plugin(WorldPlugin)
-    .add_plugin(TowerPlugin)
+    .fn_plugin(initialization_plugin)
+    .fn_plugin(camera_plugin)
+    .fn_plugin(world_plugin)
+    .fn_plugin(tower_plugin)
+    .fn_plugin(enemy_plugin)
+    .add_plugin(ProjectilePlugin)
     .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
     .add_plugins(DefaultPickingPlugins)
-    .fn_plugin(graphics_plugin);
+    .fn_plugin(graphics_plugin)
+    .fn_plugin(physics_plugin);
 
     if cfg!(debug_assertions) {
         app.add_plugin(WorldInspectorPlugin::new());
         app.fn_plugin(debug_plugin);
-        // app.add_plugin(RapierDebugRenderPlugin::default());
+        app.add_plugin(RapierDebugRenderPlugin::default());
     }
     app
 }

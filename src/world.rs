@@ -1,27 +1,276 @@
-use bevy::{pbr::NotShadowCaster, prelude::*};
+use std::str::FromStr;
+
+use crate::{GameAssets, PhysicsBundle, Portal};
+use bevy::{
+    gltf::{Gltf, GltfMesh, GltfNode},
+    pbr::NotShadowCaster,
+    prelude::*,
+};
 use bevy_mod_picking::*;
-use bevy_rapier3d::prelude::RapierConfiguration;
+use bevy_rapier3d::prelude::*;
+use std::fmt::Display;
 
-use crate::GameAssets;
-
+#[derive(Reflect, Component)]
 pub enum TowerBase {
-    Bright(Vec3),
-    Purple(Vec3),
-    Bad(Vec3),
+    Bad(String),
+    Normal(String),
+    Super(String),
 }
 
-const MAP_TOWER_BASES: [TowerBase; 4] = [
-    TowerBase::Bad(Vec3::new(10.8182, -14.5673, -6.77553)),
-    TowerBase::Bright(Vec3::new(2.6328, -6.97, -0.693552)),
-    TowerBase::Purple(Vec3::new(-2.14896, -1.25817, -4.63252)),
-    TowerBase::Purple(Vec3::new(-4.76274, -11.2879, -7.37368)),
-];
+impl Display for TowerBase {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TowerBase::Bad(x) => write!(f, "{}", x),
+            TowerBase::Normal(x) => write!(f, "{}", x),
+            TowerBase::Super(x) => write!(f, "{}", x),
+        }
+    }
+}
 
-pub struct WorldPlugin;
+impl FromStr for TowerBase {
+    type Err = anyhow::Error;
 
-impl Plugin for WorldPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_startup_system(spawn_basic_scene);
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if let Some((_, other)) = s.split_once(",") {
+            if let Some((t, extra)) = other.split_once(".") {
+                match t {
+                    "-1" => Ok(TowerBase::Bad(extra.to_owned())),
+                    "0" => Ok(TowerBase::Normal(extra.to_owned())),
+                    "1" => Ok(TowerBase::Super(extra.to_owned())),
+                    x => {
+                        Err(anyhow::anyhow!("unknwown tower type {} found", x))
+                    }
+                }
+            } else {
+                Err(anyhow::anyhow!("no . found in towerbase name"))
+            }
+        } else {
+            Err(anyhow::anyhow!(
+                "no , delimiting the type and towerbase found"
+            ))
+        }
+    }
+}
+
+#[derive(Debug, Reflect, Component, PartialEq, Eq, Clone)]
+pub struct Proxy {
+    pub route_id: i32,
+    pub node_id: i32,
+    pub kind: ProxyKind,
+    pub movement_type: MovementType,
+}
+
+#[derive(Debug, Reflect, Component)]
+pub struct Route {}
+
+#[derive(Debug, Reflect, PartialEq, Eq, Clone)]
+pub enum ProxyKind {
+    Route,
+    Portal,
+}
+
+impl Display for ProxyKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ProxyKind::Route => write!(f, "route"),
+            ProxyKind::Portal => write!(f, "portal"),
+        }
+    }
+}
+
+#[derive(Debug, Reflect, PartialEq, Eq, Clone)]
+pub enum MovementType {
+    Walking,
+    Falling,
+}
+
+impl FromStr for Proxy {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        //Proxy,kind,route_id,node_id,movement_type
+        let parts = s.split(",").collect::<Vec<&str>>();
+        Ok(Self {
+            route_id: parts[2].parse()?,
+            node_id: parts[3].parse()?,
+            kind: match parts[1] {
+                "route" => ProxyKind::Route,
+                _ => ProxyKind::Route,
+            },
+            movement_type: match parts[4] {
+                "walk" => MovementType::Walking,
+                _ => MovementType::Falling,
+            },
+        })
+    }
+}
+
+impl Display for Proxy {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}_{}_{}", self.kind, self.route_id, self.node_id)
+    }
+}
+
+pub fn world_plugin(app: &mut App) {
+    app.register_type::<Proxy>()
+        .register_type::<TowerBase>()
+        .register_type::<Route>()
+        .add_startup_system(spawn_basic_scene)
+        .add_system(handle_map_spawn);
+}
+
+fn handle_map_spawn(
+    mut ev_asset: EventReader<AssetEvent<Gltf>>,
+    mut commands: Commands,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    meshes: ResMut<Assets<Mesh>>,
+    assets: Res<GameAssets>,
+    assets_gltfmesh: Res<Assets<GltfMesh>>,
+    assets_gltf: Res<Assets<Gltf>>,
+    nodes: Res<Assets<GltfNode>>,
+) {
+    for ev in ev_asset.iter() {
+        match ev {
+            AssetEvent::Created { handle } => {
+                if handle == assets.map() {
+                    let map = assets_gltf.get(handle).unwrap();
+
+                    let map_gltf_mesh =
+                        assets_gltfmesh.get(&map.meshes[0]).unwrap();
+
+                    let map_mesh =
+                        meshes.get(&map_gltf_mesh.primitives[0].mesh).unwrap();
+
+                    let default_collider_color =
+                        materials.add(Color::NONE.into());
+                    let tower_base_selected_color =
+                        materials.add(Color::rgba(0.3, 0.9, 0.3, 0.9).into());
+                    let route_color =
+                        materials.add(Color::rgba(0.9, 0.9, 0.3, 0.9).into());
+
+                    let capsule_handle = assets.get_capsule_shape();
+
+                    commands
+                        .spawn((
+                            SceneBundle {
+                                scene: map.default_scene.clone().unwrap(),
+                                ..Default::default()
+                            },
+                            Name::new("Map"),
+                        ))
+                        .with_children(|commands| {
+                            for (name, node_handle) in map.named_nodes.iter() {
+                                if name.to_lowercase().starts_with("tower") {
+                                    let tower_base =
+                                        TowerBase::from_str(name).unwrap();
+                                    let node = nodes.get(node_handle).unwrap();
+                                    commands.spawn((
+                                        PbrBundle {
+                                            mesh: capsule_handle.clone(),
+                                            material: default_collider_color
+                                                .clone(),
+                                            transform: node
+                                                .transform
+                                                .mul_transform(
+                                                    Transform::from_xyz(
+                                                        0.0, 1.0, 0.0,
+                                                    ),
+                                                )
+                                                .with_scale(Vec3::new(
+                                                    1.5, 1.5, 1.5,
+                                                )),
+                                            ..Default::default()
+                                        },
+                                        Name::new(format!(
+                                            "Tower_Base_{}",
+                                            tower_base
+                                        )),
+                                        Highlighting {
+                                            initial: default_collider_color
+                                                .clone(),
+                                            hovered: Some(
+                                                tower_base_selected_color
+                                                    .clone(),
+                                            ),
+                                            pressed: Some(
+                                                tower_base_selected_color
+                                                    .clone(),
+                                            ),
+                                            selected: Some(
+                                                tower_base_selected_color
+                                                    .clone(),
+                                            ),
+                                        },
+                                        NotShadowCaster,
+                                        PickableBundle::default(),
+                                        tower_base,
+                                    ));
+                                } else if name
+                                    .to_lowercase()
+                                    .starts_with("proxy")
+                                {
+                                    let proxy = Proxy::from_str(name).unwrap();
+
+                                    let node = nodes.get(node_handle).unwrap();
+
+                                    if matches!(proxy.kind, ProxyKind::Route) {
+                                        commands.spawn((
+                                            PbrBundle {
+                                                mesh: capsule_handle.clone(),
+                                                material: route_color.clone(),
+                                                transform: node.transform,
+                                                ..Default::default()
+                                            },
+                                            Name::new(format!(
+                                                "Proxy_{}",
+                                                proxy
+                                            )),
+                                            proxy.clone(),
+                                            Route {},
+                                            PhysicsBundle::moving_entity(
+                                                Vec3::new(1.0, 1.0, 1.0),
+                                            )
+                                            .make_fixed(),
+                                        ));
+                                    }
+                                } else if name
+                                    .to_lowercase()
+                                    .starts_with("portal")
+                                {
+                                    let node = nodes.get(node_handle).unwrap();
+                                    commands.spawn((
+                                        SpatialBundle {
+                                            transform: node.transform,
+                                            ..Default::default()
+                                        },
+                                        Name::new("Portal"),
+                                        Portal::new(),
+                                        Proxy {
+                                            route_id: 0,
+                                            node_id: -1,
+                                            kind: ProxyKind::Portal,
+                                            movement_type:
+                                                MovementType::Walking,
+                                        },
+                                    ));
+                                }
+                            }
+                        });
+
+                    commands
+                        .spawn(SpatialBundle::from_transform(
+                            Transform::from_xyz(0.3, 2.0, 9.0),
+                        ))
+                        .insert(PhysicsBundle::moving_entity(Vec3::new(
+                            0.4, 0.4, 0.4,
+                        )))
+                        .insert(Name::new("Bouncy Capsule"))
+                        .insert(assets.get_capsule_shape().clone())
+                        .insert(tower_base_selected_color.clone());
+                }
+            }
+            x => info!("Asset Event {:?} not handled", x),
+        }
     }
 }
 
@@ -30,10 +279,9 @@ fn spawn_basic_scene(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut rapier_config: ResMut<RapierConfiguration>,
-    assets: Res<GameAssets>,
 ) {
     // set gravity
-    rapier_config.gravity = Vec3::ZERO;
+    rapier_config.gravity = -Vec3::Y;
 
     commands
         .spawn(PointLightBundle {
@@ -44,15 +292,10 @@ fn spawn_basic_scene(
                 shadows_enabled: true,
                 ..default()
             },
-            transform: Transform::from_xyz(-5.0, 10.0, -5.0),
+            transform: Transform::from_xyz(3.1, 10.0, 8.0),
             ..default()
         })
         .insert(Name::new("Sun"));
-
-    let default_collider_color =
-        materials.add(Color::rgba(0.3, 0.5, 0.3, 0.3).into());
-    let selected_collider_color =
-        materials.add(Color::rgba(0.3, 0.9, 0.3, 0.9).into());
 
     commands
         .spawn(PbrBundle {
@@ -62,56 +305,4 @@ fn spawn_basic_scene(
             ..default()
         })
         .insert(Name::new("Floor"));
-
-    commands
-        .spawn(SceneBundle {
-            scene: assets.scene(crate::Scenes::Map),
-            ..Default::default()
-        })
-        .insert(Name::new("Map"))
-        .with_children(|commands| {
-            for (idx, tb) in MAP_TOWER_BASES.iter().enumerate() {
-                let (handle, coords) = match tb {
-                    TowerBase::Bright(v) => {
-                        (assets.scene(crate::Scenes::TowerBaseBright), v)
-                    }
-                    TowerBase::Purple(v) => {
-                        (assets.scene(crate::Scenes::TowerBasePurple), v)
-                    }
-                    TowerBase::Bad(v) => {
-                        (assets.scene(crate::Scenes::TowerBaseBad), v)
-                    }
-                };
-
-                commands
-                    .spawn(SpatialBundle::from_transform(
-                        Transform::from_translation(*coords),
-                    ))
-                    .insert(Name::new(format!("Tower_Base_{}", idx)))
-                    .insert(meshes.add(shape::Capsule::default().into()))
-                    .insert(Highlighting {
-                        initial: default_collider_color.clone(),
-                        hovered: Some(selected_collider_color.clone()),
-                        pressed: Some(selected_collider_color.clone()),
-                        selected: Some(selected_collider_color.clone()),
-                    })
-                    .insert(default_collider_color.clone())
-                    .insert(NotShadowCaster)
-                    .insert(PickableBundle::default())
-                    .with_children(|commands| {
-                        commands
-                            .spawn(SceneBundle {
-                                scene: handle,
-                                transform: Transform::from_xyz(
-                                    coords.x, coords.y, coords.z,
-                                ),
-                                ..Default::default()
-                            })
-                            .insert(Name::new(format!(
-                                "Tower_Base_Child_{}",
-                                idx
-                            )));
-                    });
-            }
-        });
 }
