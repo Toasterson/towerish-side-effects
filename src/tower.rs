@@ -1,8 +1,12 @@
-use bevy::{ecs::query::QuerySingleError, prelude::*, ui::FocusPolicy};
+use bevy::{
+    ecs::{event::ManualEventIteratorWithId, query::QuerySingleError},
+    prelude::*,
+    ui::FocusPolicy,
+};
 use bevy_mod_picking::*;
 use strum::{Display as EnumDisplay, EnumIter, IntoEnumIterator};
 
-use crate::GameAssets;
+use crate::{graphics::CreateParticleSystem, GameAssets};
 
 #[derive(Component)]
 pub struct TowerUIRoot;
@@ -79,6 +83,7 @@ fn tower_button_clicked(
     mut commands: Commands,
     selection: Query<(Entity, &Selection, &Transform)>,
     assets: Res<GameAssets>,
+    mut particle_events: EventWriter<CreateParticleSystem>,
 ) {
     for (interaction, tower_type) in &interaction {
         if matches!(interaction, Interaction::Clicked) {
@@ -91,6 +96,11 @@ fn tower_button_clicked(
                         transform.translation,
                         *tower_type,
                     );
+                    particle_events.send(CreateParticleSystem {
+                        system: crate::graphics::ParticleSystemType::Landing,
+                        location: transform.translation,
+                        orientation: Vec3::Y,
+                    });
                 }
             }
         }

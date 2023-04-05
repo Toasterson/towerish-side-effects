@@ -9,7 +9,14 @@ mod projectile;
 mod tower;
 mod world;
 
-use bevy::{prelude::*, window::WindowMode};
+use bevy::{
+    prelude::*,
+    render::{
+        settings::{WgpuFeatures, WgpuSettings},
+        RenderPlugin,
+    },
+    window::WindowMode,
+};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 use bevy_mod_picking::*;
@@ -33,22 +40,30 @@ pub use world::*;
 pub const LAUNCHER_TITLE: &str = "Towering Sideffects";
 
 pub fn app(fullscreen: bool) -> App {
+    let mut wgpu_settings = WgpuSettings::default();
+    wgpu_settings
+        .features
+        .set(WgpuFeatures::VERTEX_WRITABLE_STORAGE, true);
     let mode = if fullscreen {
         WindowMode::BorderlessFullscreen
     } else {
         WindowMode::Windowed
     };
     let mut app = App::new();
-    app.add_plugins(DefaultPlugins.set(WindowPlugin {
-        primary_window: Some(Window {
-            title: LAUNCHER_TITLE.to_string(),
-            canvas: Some("#bevy".to_string()),
-            fit_canvas_to_parent: true,
-            mode,
-            ..default()
-        }),
-        ..default()
-    }))
+    app.add_plugins(
+        DefaultPlugins
+            .set(WindowPlugin {
+                primary_window: Some(Window {
+                    title: LAUNCHER_TITLE.to_string(),
+                    canvas: Some("#bevy".to_string()),
+                    fit_canvas_to_parent: true,
+                    mode,
+                    ..default()
+                }),
+                ..default()
+            })
+            .set(RenderPlugin { wgpu_settings }),
+    )
     .insert_resource(ClearColor(Color::rgb(0.2, 0.2, 0.2)))
     .fn_plugin(initialization_plugin)
     .fn_plugin(path_manager_plugin)
