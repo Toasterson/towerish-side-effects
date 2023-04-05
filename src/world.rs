@@ -1,8 +1,11 @@
 use std::str::FromStr;
 
-use crate::{GameAssets, PhysicsBundle, Portal};
+use crate::{
+    pathmanager::{PathManager, PathManagerUpdate},
+    GameAssets, PhysicsBundle, Portal,
+};
 use bevy::{
-    gltf::{Gltf, GltfMesh, GltfNode},
+    gltf::{Gltf, GltfNode},
     pbr::NotShadowCaster,
     prelude::*,
 };
@@ -52,12 +55,13 @@ impl FromStr for TowerBase {
     }
 }
 
-#[derive(Debug, Reflect, Component, PartialEq, Eq, Clone)]
+#[derive(Debug, Reflect, Component, PartialEq, Clone)]
 pub struct Proxy {
     pub route_id: i32,
     pub node_id: i32,
     pub kind: ProxyKind,
     pub movement_type: MovementType,
+    pub location: Vec3,
 }
 
 #[derive(Debug, Reflect, Component)]
@@ -101,6 +105,7 @@ impl FromStr for Proxy {
                 "walk" => MovementType::Walking,
                 _ => MovementType::Falling,
             },
+            location: Vec3::ZERO,
         })
     }
 }
@@ -121,11 +126,10 @@ pub fn world_plugin(app: &mut App) {
 
 fn handle_map_spawn(
     mut ev_asset: EventReader<AssetEvent<Gltf>>,
+    mut ev_pathmanager_update: EventWriter<PathManagerUpdate>,
     mut commands: Commands,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    meshes: ResMut<Assets<Mesh>>,
     assets: Res<GameAssets>,
-    assets_gltfmesh: Res<Assets<GltfMesh>>,
     assets_gltf: Res<Assets<Gltf>>,
     nodes: Res<Assets<GltfNode>>,
 ) {
@@ -134,12 +138,6 @@ fn handle_map_spawn(
             AssetEvent::Created { handle } => {
                 if handle == assets.map() {
                     let map = assets_gltf.get(handle).unwrap();
-
-                    let map_gltf_mesh =
-                        assets_gltfmesh.get(&map.meshes[0]).unwrap();
-
-                    let map_mesh =
-                        meshes.get(&map_gltf_mesh.primitives[0].mesh).unwrap();
 
                     let default_collider_color =
                         materials.add(Color::NONE.into());
@@ -157,6 +155,7 @@ fn handle_map_spawn(
                                 ..Default::default()
                             },
                             Name::new("Map"),
+                            PathManager::new(),
                         ))
                         .with_children(|commands| {
                             for (name, node_handle) in map.named_nodes.iter() {
@@ -209,9 +208,11 @@ fn handle_map_spawn(
                                     .to_lowercase()
                                     .starts_with("proxy")
                                 {
-                                    let proxy = Proxy::from_str(name).unwrap();
+                                    let mut proxy =
+                                        Proxy::from_str(name).unwrap();
 
                                     let node = nodes.get(node_handle).unwrap();
+                                    proxy.location = node.transform.translation;
 
                                     if matches!(proxy.kind, ProxyKind::Route) {
                                         commands.spawn((
@@ -226,12 +227,11 @@ fn handle_map_spawn(
                                                 proxy
                                             )),
                                             proxy.clone(),
-                                            Route {},
-                                            PhysicsBundle::moving_entity(
-                                                Vec3::new(1.0, 1.0, 1.0),
-                                            )
-                                            .make_fixed(),
                                         ));
+
+                                        ev_pathmanager_update.send(
+                                            PathManagerUpdate::AddNode(proxy),
+                                        );
                                     }
                                 } else if name
                                     .to_lowercase()
@@ -245,13 +245,6 @@ fn handle_map_spawn(
                                         },
                                         Name::new("Portal"),
                                         Portal::new(),
-                                        Proxy {
-                                            route_id: 0,
-                                            node_id: -1,
-                                            kind: ProxyKind::Portal,
-                                            movement_type:
-                                                MovementType::Walking,
-                                        },
                                     ));
                                 }
                             }

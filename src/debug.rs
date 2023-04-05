@@ -23,7 +23,7 @@ fn locate_lights(
 fn display_path(mut lines: ResMut<DebugLines>, paths: Query<&PathManager>) {
     for path in paths.iter() {
         for (a, b) in path.waypoints.iter().zip(path.waypoints.iter().skip(1)) {
-            lines.line(*a, *b, 0.0);
+            lines.line(a.location, b.location, 0.0);
         }
     }
 }

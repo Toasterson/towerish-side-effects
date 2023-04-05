@@ -32,7 +32,7 @@ pub struct Portal {
 impl Portal {
     pub fn new() -> Self {
         Self {
-            spawn_timer: Timer::from_seconds(1.0, TimerMode::Once),
+            spawn_timer: Timer::from_seconds(1.0, TimerMode::Repeating),
         }
     }
 }
@@ -42,49 +42,41 @@ pub fn enemy_plugin(app: &mut App) {
         .register_type::<Enemy>()
         .register_type::<Portal>()
         .register_type::<PathProgress>()
-        .register_type::<PathManager>()
-        .add_startup_system(example_setup)
+        //        .add_startup_system(example_setup)
         .add_system(enemy_spawner)
         .add_system(move_enemies.after(enemy_spawner));
 }
 
-fn example_setup(mut commands: Commands) {
-    commands.spawn((
-        (Name::new("Dummy Path")),
-        PathManager::new(vec![
-            Vec3::new(1., 5., 6.),
-            Vec3::new(10., 5., -10.),
-            Vec3::new(1., 5., 1.),
-        ]),
-    ));
-}
-
 fn enemy_spawner(
     mut commands: Commands,
-    mut portal_query: Query<(&mut Portal, &Proxy, &GlobalTransform)>,
+    mut portal_query: Query<(&mut Portal, &GlobalTransform)>,
     paths: Query<Entity, With<PathManager>>,
     time: Res<Time>,
     assets: Res<GameAssets>,
 ) {
-    let path = paths.get_single().unwrap(); // def change this later
-    for (mut portal, proxy, portal_pos) in &mut portal_query {
+    for (mut portal, portal_pos) in &mut portal_query {
         portal.spawn_timer.tick(time.delta());
         if portal.spawn_timer.just_finished() {
-            let enemy = commands
-                .spawn((
-                    PbrBundle {
-                        mesh: assets.get_capsule_shape().clone(),
-                        transform: portal_pos
-                            .compute_transform()
-                            .with_rotation(Quat::from_xyzw(0.0, 0.0, 0.0, 0.0))
-                            .with_scale(Vec3::new(1.0, 1.0, 1.0)),
-                        ..Default::default()
-                    },
-                    Name::new("Enemy"),
-                    Enemy { speed: 3. },
-                    PathProgress::new(path),
-                ))
-                .id();
+            match paths.get_single() {
+                Ok(path) => {
+                    commands.spawn((
+                        PbrBundle {
+                            mesh: assets.get_capsule_shape().clone(),
+                            transform: portal_pos
+                                .compute_transform()
+                                .with_rotation(Quat::from_xyzw(
+                                    0.0, 0.0, 0.0, 0.0,
+                                ))
+                                .with_scale(Vec3::new(1.0, 1.0, 1.0)),
+                            ..Default::default()
+                        },
+                        Name::new("Enemy"),
+                        Enemy { speed: 3. },
+                        PathProgress::new(path),
+                    ));
+                }
+                Err(_) => {}
+            }
         }
     }
 }

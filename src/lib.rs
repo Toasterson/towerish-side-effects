@@ -19,6 +19,7 @@ use bevy_rapier3d::{
 };
 use debug::debug_plugin;
 use graphics::graphics_plugin;
+use pathmanager::path_manager_plugin;
 use seldom_fn_plugin::FnPluginExt;
 
 pub use camera::*;
@@ -50,6 +51,7 @@ pub fn app(fullscreen: bool) -> App {
     }))
     .insert_resource(ClearColor(Color::rgb(0.2, 0.2, 0.2)))
     .fn_plugin(initialization_plugin)
+    .fn_plugin(path_manager_plugin)
     .fn_plugin(camera_plugin)
     .fn_plugin(world_plugin)
     .fn_plugin(tower_plugin)
