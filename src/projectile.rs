@@ -1,8 +1,6 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 
-use crate::SideEffects;
-
 #[derive(Reflect, Component, Default)]
 #[reflect(Component)]
 pub struct Lifetime {
@@ -30,15 +28,14 @@ pub fn projectile_plugin(app: &mut App) {
 
 fn projectile_collision_detection(
     mut commands: Commands,
-    projectile_query: Query<(Entity, &SideEffects), With<Projectile>>,
+    projectile_query: Query<Entity, With<Projectile>>,
     mut colliding_entities_query: Query<(&mut Health, &CollidingEntities)>,
 ) {
     for (mut health, colliding_entities) in colliding_entities_query.iter_mut()
     {
-        for (projectile, side_effects) in projectile_query.iter() {
+        for projectile in projectile_query.iter() {
             if colliding_entities.contains(projectile) {
                 debug!("Hit!");
-                debug!("Side effects: {:#?}", side_effects);
                 commands.entity(projectile).despawn_recursive();
                 health.value -= 1.0;
             }

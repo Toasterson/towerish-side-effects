@@ -81,8 +81,8 @@ fn enemy_spawner(
                             ..Default::default()
                         },
                         Name::new("Enemy"),
-                        Enemy { speed: 3. },
-                        Health { value: 1.0 },
+                        Enemy { speed: 1.5 },
+                        Health { value: 2.0 },
                         PathProgress::new(path),
                         PhysicsBundle::moving_entity(Vec3::new(1.0, 1.0, 1.0))
                             .make_kinematic(),

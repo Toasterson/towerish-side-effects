@@ -2,6 +2,7 @@ use bevy::{
     ecs::query::QuerySingleError, prelude::*, ui::FocusPolicy, utils::FloatOrd,
 };
 use bevy_mod_picking::*;
+use bevy_rapier3d::prelude::Ccd;
 use strum::{Display as EnumDisplay, EnumIter, IntoEnumIterator};
 
 use crate::{
@@ -50,6 +51,9 @@ fn tower_shoot(
         if tower.shooting_timer.just_finished() {
             let bullet_spawn = transform.translation() + tower.bullet_offset;
 
+            let target_offset =
+                transform.translation() + Vec3::new(1.5, 0.0, 0.0);
+
             let direction = targets
                 .iter()
                 .min_by_key(|target_transform| {
@@ -59,7 +63,7 @@ fn tower_shoot(
                     ))
                 })
                 .map(|closest_target| {
-                    closest_target.translation() - transform.translation()
+                    closest_target.translation() - target_offset
                 });
 
             if let Some(direction) = direction {
@@ -69,7 +73,10 @@ fn tower_shoot(
                         PbrBundle {
                             mesh: assets.get_capsule_shape().clone(),
                             transform: Transform::from_xyz(0.0, 0.0, 0.0)
-                                .with_rotation(Quat::from_rotation_x(90.0))
+                                .with_rotation(Quat::from_axis_angle(
+                                    target_offset,
+                                    90.0,
+                                ))
                                 .with_scale(Vec3::new(0.2, 0.2, 0.2)),
                             ..default()
                         },
@@ -78,11 +85,12 @@ fn tower_shoot(
                         },
                         Projectile {
                             direction,
-                            speed: 15.5,
+                            speed: 20.0,
                         },
                         Name::new("Bullet"),
                         PhysicsBundle::moving_entity(Vec3::new(0.2, 0.2, 0.2))
                             .make_kinematic(),
+                        Ccd::enabled(),
                     ));
                 });
             }
@@ -131,10 +139,9 @@ pub fn spawn_tower(
         })
         .insert(tt)
         .with_children(|commands| {
-            commands.spawn(PbrBundle {
-                mesh: assets.get_capsule_shape().clone(),
-                transform: Transform::from_xyz(0.0, -0.8, 0.0)
-                    .with_scale(Vec3::new(1.5, 1.5, 1.5)),
+            commands.spawn(SceneBundle {
+                scene: assets.tower_slice_a.clone(),
+                transform: Transform::from_xyz(0.0, -0.4, 0.0),
                 ..Default::default()
             });
         })
