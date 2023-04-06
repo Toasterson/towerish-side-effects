@@ -16,7 +16,7 @@ fn spawn_camera(mut commands: Commands) {
             transform: Transform::from_xyz(-6.0, 18.1, 16.5)
                 .looking_at(Vec3::ZERO, Vec3::Y),
             camera: Camera {
-                hdr: true,
+                hdr: false,
                 ..Default::default()
             },
             ..Default::default()

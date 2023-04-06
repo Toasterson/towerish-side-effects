@@ -70,6 +70,7 @@ fn asset_loading(
         tower_slice_a: assets.load("tower_slice_a.glb#Scene0"),
         gun_a: assets.load("gun_a.glb#Scene0"),
         ring_a: assets.load("ring_a#Scene0"),
+        enemy_color: tower_base_selected_color.clone(),
         tower_base_selected_color,
         default_collider_color,
     });
