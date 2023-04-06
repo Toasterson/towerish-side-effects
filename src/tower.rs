@@ -98,8 +98,7 @@ fn tower_button_clicked(
                     );
                     particle_events.send(CreateParticleSystem {
                         system: crate::graphics::ParticleSystemType::Landing,
-                        location: transform.translation,
-                        orientation: Vec3::Y,
+                        transform: *transform,
                     });
                 }
             }

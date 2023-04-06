@@ -33,9 +33,9 @@ bevy_mod_picking = "0.12.0"
 bevy_rapier3d = { version = "0.21.0" , features=["debug-render-3d"]}
 strum = { version = "0.24.1", features = ["derive"] }
 
-bevy_prototype_debug_lines = { version = "0.10", features = ["3d"] }
+bevy_prototype_debug_lines = { version = "0.10.1", features = ["3d"] }
 bevy_atmosphere = "0.6"
-bevy_hanabi = { version = "0.6" }
+bevy_hanabi = { git = "https://github.com/djeedai/bevy_hanabi", branch="main", features = ["3d"] }
 bevy_editor_pls = "0.4"
 bevy-vfx-bag = "0.2"
 seldom_fn_plugin = "0.3"
