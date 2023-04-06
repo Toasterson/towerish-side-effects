@@ -72,17 +72,22 @@ fn particle_system_events(
     for event in events.iter() {
         let texture_handle: Handle<Image> = asset_server.load("cloud.png");
 
-        let mut gradient = Gradient::new();
-        gradient.add_key(0.0, Vec4::splat(1.0));
-        gradient.add_key(0.5, Vec4::splat(1.0));
-        gradient.add_key(1.0, Vec4::new(1.0, 1.0, 1.0, 0.0));
+        let mut color_gradient = Gradient::new();
+        color_gradient.add_key(0.0, Vec4::splat(1.0));
+        color_gradient.add_key(0.2, Vec4::splat(1.0));
+        color_gradient.add_key(0.8, Vec4::new(1.0, 1.0, 1.0, 0.8));
+        color_gradient.add_key(1.0, Vec4::new(1.0, 1.0, 1.0, 0.0));
+
+        let mut size_gradient = Gradient::new();
+        size_gradient.add_key(0.0, Vec2::new(0.2, 0.2));
+        size_gradient.add_key(1.0, Vec2::new(1., 1.));
 
         let effect = effects.add(
             EffectAsset {
                 name: "Gradient".to_string(),
                 // TODO: Figure out why no particle spawns if this is 1
-                capacity: 32768,
-                spawner: Spawner::once(32.0.into(), true),
+                capacity: 400,
+                spawner: Spawner::once(128.0.into(), true),
                 ..Default::default()
             }
             .init(InitPositionCircleModifier {
@@ -94,17 +99,21 @@ fn particle_system_events(
             .init(InitVelocityCircleModifier {
                 center: event.location,
                 axis: event.orientation,
-                speed: Value::Uniform((1.0, 1.5)),
+                speed: Value::Uniform((3.0, 4.0)),
             })
             .init(InitLifetimeModifier {
-                lifetime: bevy_hanabi::Value::Single(10.),
+                lifetime: bevy_hanabi::Value::Uniform((0.1, 1.)),
             })
+            .update(LinearDragModifier { drag: 3. })
+            .render(BillboardModifier {})
             .render(ParticleTextureModifier {
                 texture: texture_handle.clone(),
             })
-            .render(ColorOverLifetimeModifier { gradient })
+            .render(ColorOverLifetimeModifier {
+                gradient: color_gradient,
+            })
             .render(SizeOverLifetimeModifier {
-                gradient: Gradient::constant([0.2; 2].into()),
+                gradient: size_gradient,
             }),
         );
 
