@@ -1,4 +1,7 @@
 use bevy::prelude::*;
+use bevy_rapier3d::prelude::*;
+
+use crate::SideEffects;
 
 #[derive(Reflect, Component, Default)]
 #[reflect(Component)]
@@ -12,14 +15,34 @@ pub struct Projectile {
     pub speed: f32,
 }
 
-pub struct ProjectilePlugin;
+#[derive(Reflect, Component)]
+pub struct Health {
+    pub value: f32,
+}
 
-impl Plugin for ProjectilePlugin {
-    fn build(&self, app: &mut App) {
-        app.register_type::<Lifetime>()
-            .register_type::<Projectile>()
-            .add_system(move_projectile)
-            .add_system(projectile_despawn);
+pub fn projectile_plugin(app: &mut App) {
+    app.register_type::<Lifetime>()
+        .register_type::<Projectile>()
+        .add_system(move_projectile)
+        .add_system(projectile_despawn)
+        .add_system(projectile_collision_detection);
+}
+
+fn projectile_collision_detection(
+    mut commands: Commands,
+    projectile_query: Query<(Entity, &SideEffects), With<Projectile>>,
+    mut colliding_entities_query: Query<(&mut Health, &CollidingEntities)>,
+) {
+    for (mut health, colliding_entities) in colliding_entities_query.iter_mut()
+    {
+        for (projectile, side_effects) in projectile_query.iter() {
+            if colliding_entities.contains(projectile) {
+                debug!("Hit!");
+                debug!("Side effects: {:#?}", side_effects);
+                commands.entity(projectile).despawn_recursive();
+                health.value -= 1.0;
+            }
+        }
     }
 }
 

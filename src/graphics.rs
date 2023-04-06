@@ -150,7 +150,7 @@ fn particle_system_events(
         transform: new_transform,
     } in events.iter()
     {
-        let Ok((effect, mut spawner, mut transform)) = effect.get_mut(match system {
+        let Ok((_effect, mut spawner, mut transform)) = effect.get_mut(match system {
             ParticleSystemType::Landing => systems.landing,
             ParticleSystemType::MuzzleFlash => systems.muzzle_flash,
             ParticleSystemType::Impact => systems.impact,
