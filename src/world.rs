@@ -253,8 +253,6 @@ fn handle_map_spawn(
 
 fn spawn_basic_scene(
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
     mut rapier_config: ResMut<RapierConfiguration>,
 ) {
     // set gravity
@@ -273,13 +271,4 @@ fn spawn_basic_scene(
             ..default()
         })
         .insert(Name::new("Sun"));
-
-    commands
-        .spawn(PbrBundle {
-            mesh: meshes.add(shape::Plane::from_size(15.0).into()),
-            material: materials.add(Color::rgb(0.3, 0.3, 0.3).into()),
-            transform: Transform::from_xyz(0., -15., 0.),
-            ..default()
-        })
-        .insert(Name::new("Floor"));
 }

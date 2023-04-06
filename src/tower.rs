@@ -2,7 +2,6 @@ use bevy::{
     ecs::query::QuerySingleError, prelude::*, ui::FocusPolicy, utils::FloatOrd,
 };
 use bevy_mod_picking::*;
-use bevy_rapier3d::prelude::Ccd;
 use strum::{Display as EnumDisplay, EnumIter, IntoEnumIterator};
 
 use crate::{
@@ -51,8 +50,7 @@ fn tower_shoot(
         if tower.shooting_timer.just_finished() {
             let bullet_spawn = transform.translation() + tower.bullet_offset;
 
-            let target_offset =
-                transform.translation() + Vec3::new(1.5, 0.0, 0.0);
+            let target_offset = transform.translation();
 
             let direction = targets
                 .iter()
@@ -73,24 +71,18 @@ fn tower_shoot(
                         PbrBundle {
                             mesh: assets.get_capsule_shape().clone(),
                             transform: Transform::from_xyz(0.0, 0.0, 0.0)
-                                .with_rotation(Quat::from_axis_angle(
-                                    target_offset,
-                                    90.0,
-                                ))
                                 .with_scale(Vec3::new(0.2, 0.2, 0.2)),
                             ..default()
                         },
                         Lifetime {
-                            timer: Timer::from_seconds(2.0, TimerMode::Once),
+                            timer: Timer::from_seconds(1.0, TimerMode::Once),
                         },
                         Projectile {
                             direction,
-                            speed: 20.0,
+                            speed: 10.0,
                         },
                         Name::new("Bullet"),
-                        PhysicsBundle::moving_entity(Vec3::new(0.2, 0.2, 0.2))
-                            .make_kinematic(),
-                        Ccd::enabled(),
+                        PhysicsBundle::moving_entity().make_kinematic(),
                     ));
                 });
             }
