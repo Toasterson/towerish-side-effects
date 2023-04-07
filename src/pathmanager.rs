@@ -11,7 +11,6 @@ pub fn path_manager_plugin(app: &mut App) {
 #[derive(Component)]
 pub struct PathManager {
     pub waypoints: Vec<Proxy>,
-    pub end: Option<Proxy>,
     pub despawn_distance: f32,
 }
 
@@ -21,7 +20,6 @@ impl PathManager {
     pub fn new() -> Self {
         Self {
             waypoints: vec![],
-            end: None,
             despawn_distance: DEFAULT_DESPAWN_DISTANCE,
         }
     }
@@ -30,6 +28,7 @@ impl PathManager {
         let mut waypoints = self.waypoints.clone();
         waypoints.push(proxy);
         waypoints.sort_by(|a, b| b.node_id.cmp(&a.node_id));
+        waypoints.reverse();
         self.waypoints = waypoints;
     }
 
@@ -49,6 +48,14 @@ impl PathManager {
         }
         self.waypoints.last().unwrap().location
     }
+
+    pub fn get_start(&self) -> Option<Proxy> {
+        self.waypoints.first().map(|pp| pp.clone())
+    }
+
+    pub fn get_end(&self) -> Option<Proxy> {
+        self.waypoints.last().map(|pp| pp.clone())
+    }
 }
 
 #[derive(Debug)]
@@ -65,7 +72,7 @@ fn handle_despawn(
 ) {
     if let Ok(manager) = path_manager.get_single() {
         for (enemy_entity, enemy_pos) in &enemies {
-            if let Some(end) = &manager.end {
+            if let Some(end) = &manager.get_end() {
                 if enemy_pos.translation().distance(end.location)
                     <= manager.despawn_distance
                 {
@@ -87,15 +94,6 @@ fn handle_pathmanager_update(
                 PathManagerUpdate::AddNode(p) => {
                     info!("Adding Proxy Waypoint {} to path", p);
                     path_manager.push(p.clone());
-                    if let Some(current_end) = &path_manager.end {
-                        if current_end.node_id > p.node_id {
-                            info!("Updating end of path to {}", p);
-                            path_manager.end = Some(p.clone());
-                        }
-                    } else {
-                        info!("Adding new end of path {}", p);
-                        path_manager.end = Some(p.clone());
-                    }
                 }
                 PathManagerUpdate::RemoveNode(p) => {
                     info!("Removing Proxy Waypoint {} from path", p);
@@ -105,15 +103,6 @@ fn handle_pathmanager_update(
                         .into_iter()
                         .filter(|ve| ve.node_id != p.node_id)
                         .collect();
-
-                    if let Some(current_end) = &path_manager.end {
-                        if current_end.node_id == p.node_id {
-                            path_manager.end = path_manager
-                                .waypoints
-                                .last()
-                                .map(|p| p.clone());
-                        }
-                    }
                 }
             },
             Err(_) => info!("No Pathmanager yet while adding {:#?}", event),

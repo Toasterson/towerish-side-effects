@@ -59,33 +59,33 @@ fn enemy_death(mut commands: Commands, targets: Query<(Entity, &Health)>) {
 
 fn enemy_spawner(
     mut commands: Commands,
-    mut portal_query: Query<(&mut Portal, &GlobalTransform)>,
-    paths: Query<Entity, With<PathManager>>,
+    mut portal_query: Query<&mut Portal>,
+    paths: Query<(Entity, &PathManager)>,
     time: Res<Time>,
     assets: Res<GameAssets>,
 ) {
-    for (mut portal, portal_pos) in &mut portal_query {
+    for mut portal in &mut portal_query {
         portal.spawn_timer.tick(time.delta());
         if portal.spawn_timer.just_finished() {
             match paths.get_single() {
-                Ok(path) => {
-                    commands.spawn((
-                        PbrBundle {
-                            mesh: assets.get_capsule_shape().clone(),
-                            transform: portal_pos
-                                .compute_transform()
-                                .with_rotation(Quat::from_xyzw(
-                                    0.0, 0.0, 0.0, 0.0,
-                                ))
+                Ok((path, path_manager)) => {
+                    if let Some(path_start) = path_manager.get_start() {
+                        commands.spawn((
+                            PbrBundle {
+                                mesh: assets.get_capsule_shape().clone(),
+                                transform: Transform::from_translation(
+                                    path_start.location,
+                                )
                                 .with_scale(Vec3::new(1.0, 1.0, 1.0)),
-                            ..Default::default()
-                        },
-                        Name::new("Enemy"),
-                        Enemy { speed: 1.5 },
-                        Health { value: 2.0 },
-                        PathProgress::new(path),
-                        PhysicsBundle::moving_entity().make_kinematic(),
-                    ));
+                                ..Default::default()
+                            },
+                            Name::new("Enemy"),
+                            Enemy { speed: 1.5 },
+                            Health { value: 2.0 },
+                            PathProgress::new(path),
+                            PhysicsBundle::moving_entity().make_kinematic(),
+                        ));
+                    }
                 }
                 Err(_) => {}
             }

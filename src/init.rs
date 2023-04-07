@@ -61,7 +61,7 @@ fn asset_loading(
 
     commands.insert_resource(GameAssets {
         font: assets.load("QuattrocentoSans-Bold.ttf"),
-        map: assets.load("map_a.glb"),
+        map: assets.load("map_a_0.2.glb"),
         map_collider: assets.load("map_a_collision.glb#Mesh0/Primitive0"),
         tower_base_bright: assets.load("tower_base_a_bright.glb#Scene0"),
         tower_base_purple: assets.load("tower_base_a_purple.glb#Scene0"),
