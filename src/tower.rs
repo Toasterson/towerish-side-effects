@@ -43,7 +43,7 @@ pub fn tower_plugin(app: &mut App) {
         .add_system(tower_shoot);
 }
 
-fn tower_shoot(
+pub fn tower_shoot(
     mut commands: Commands,
     assets: Res<GameAssets>,
     mut towers: Query<(Entity, &mut Tower, &GlobalTransform)>,
@@ -74,17 +74,18 @@ fn tower_shoot(
                 commands.entity(tower_ent).with_children(|commands| {
                     commands.spawn((
                         PbrBundle {
-                            mesh: assets.get_capsule_shape().clone(),
+                            mesh: assets.shpere_shape.clone(),
+                            material: assets.ball_projectile_color.clone(),
                             transform: Transform::from_xyz(0.0, 0.0, 0.0)
                                 .with_scale(Vec3::new(0.2, 0.2, 0.2)),
                             ..default()
                         },
                         Lifetime {
-                            timer: Timer::from_seconds(1.0, TimerMode::Once),
+                            timer: Timer::from_seconds(1.5, TimerMode::Once),
                         },
                         Projectile {
                             direction,
-                            speed: 10.0,
+                            speed: 60.0,
                         },
                         Name::new("Bullet"),
                         PhysicsBundle::moving_entity().make_kinematic(),
@@ -107,7 +108,7 @@ pub fn spawn_tower(
         )))
         .insert(Name::new("Default Tower"))
         .insert(Tower {
-            shooting_timer: Timer::from_seconds(0.8, TimerMode::Repeating),
+            shooting_timer: Timer::from_seconds(0.2, TimerMode::Repeating),
             bullet_offset: Vec3::new(0.0, 1.2, 0.0),
             effects: vec![],
         })

@@ -1,5 +1,7 @@
 use bevy::{
-    core_pipeline::bloom::BloomSettings, input::mouse::MouseWheel, prelude::*,
+    core_pipeline::{bloom::BloomSettings, tonemapping::Tonemapping},
+    input::mouse::MouseWheel,
+    prelude::*,
 };
 use bevy_atmosphere::prelude::*;
 use bevy_mod_picking::PickingCameraBundle;
@@ -19,6 +21,7 @@ fn spawn_camera(mut commands: Commands) {
                 hdr: false,
                 ..Default::default()
             },
+            tonemapping: Tonemapping::TonyMcMapface,
             ..Default::default()
         },
         Name::new("Camera"),

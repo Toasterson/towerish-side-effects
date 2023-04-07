@@ -1,6 +1,8 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 
+use crate::tower_shoot;
+
 #[derive(Reflect, Component, Default)]
 #[reflect(Component)]
 pub struct Lifetime {
@@ -21,7 +23,7 @@ pub struct Health {
 pub fn projectile_plugin(app: &mut App) {
     app.register_type::<Lifetime>()
         .register_type::<Projectile>()
-        .add_system(move_projectile)
+        .add_system(move_projectile.after(tower_shoot))
         .add_system(projectile_despawn)
         .add_system(projectile_collision_detection);
 }
@@ -37,7 +39,7 @@ fn projectile_collision_detection(
             if colliding_entities.contains(projectile) {
                 debug!("Hit!");
                 commands.entity(projectile).despawn_recursive();
-                health.value -= 1.0;
+                health.value -= 0.1;
             }
         }
     }

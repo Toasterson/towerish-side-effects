@@ -9,12 +9,14 @@ pub struct GameAssets {
     tower_base_purple: Handle<Scene>,
     tower_base_bad: Handle<Scene>,
     capsule_shape: Handle<Mesh>,
+    pub shpere_shape: Handle<Mesh>,
     pub tower_slice_a: Handle<Scene>,
     pub ring_a: Handle<Scene>,
     pub gun_a: Handle<Scene>,
     pub default_collider_color: Handle<StandardMaterial>,
     pub tower_base_selected_color: Handle<StandardMaterial>,
     pub enemy_color: Handle<StandardMaterial>,
+    pub ball_projectile_color: Handle<StandardMaterial>,
 }
 
 pub enum Scenes {
@@ -56,7 +58,7 @@ fn asset_loading(
 ) {
     let default_collider_color = materials.add(Color::NONE.into());
     let tower_base_selected_color =
-        materials.add(Color::rgba(0.3, 0.9, 0.3, 0.9).into());
+        materials.add(Color::rgba_linear(0.3, 0.9, 0.3, 0.9).into());
     let capsule_shape = meshes.add(shape::Capsule::default().into());
 
     commands.insert_resource(GameAssets {
@@ -73,5 +75,17 @@ fn asset_loading(
         enemy_color: tower_base_selected_color.clone(),
         tower_base_selected_color,
         default_collider_color,
+        ball_projectile_color: materials.add(StandardMaterial {
+            emissive: Color::rgb_linear(2.0, 13.99, 5.32),
+            ..Default::default()
+        }),
+        shpere_shape: meshes.add(
+            shape::Icosphere {
+                radius: 0.5,
+                subdivisions: 5,
+            }
+            .try_into()
+            .unwrap(),
+        ),
     });
 }

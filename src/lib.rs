@@ -66,7 +66,7 @@ pub fn app(fullscreen: bool) -> App {
             })
             .set(RenderPlugin { wgpu_settings }),
     )
-    .insert_resource(ClearColor(Color::rgb(0.2, 0.2, 0.2)))
+    .insert_resource(ClearColor(Color::rgb_linear(0.2, 0.2, 0.2)))
     .fn_plugin(initialization_plugin)
     .fn_plugin(path_manager_plugin)
     .fn_plugin(camera_plugin)
