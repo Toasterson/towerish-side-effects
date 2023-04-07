@@ -40,5 +40,5 @@ bevy_editor_pls = "0.4"
 bevy-vfx-bag = "0.2"
 seldom_fn_plugin = "0.3"
 anyhow = "1.0.70"
-bevy_egui = { version = "0.20.2", default-features = false, features = ["serde", "default_fonts", "arboard", "thread_local", "webbrowser", "immutable_ctx"] }
+bevy_egui = { version = "0.20.2", default-features = false, features = ["serde", "default_fonts", "arboard", "thread_local", "webbrowser"] }
 

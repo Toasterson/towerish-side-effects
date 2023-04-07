@@ -7,6 +7,7 @@ mod pathmanager;
 mod physics;
 mod projectile;
 mod tower;
+mod ui_plugin;
 mod world;
 
 use bevy::{
@@ -35,6 +36,7 @@ pub use init::*;
 pub use physics::*;
 pub use projectile::*;
 pub use tower::*;
+pub use ui_plugin::*;
 pub use world::*;
 
 pub const LAUNCHER_TITLE: &str = "Towering Sideffects";
@@ -72,6 +74,7 @@ pub fn app(fullscreen: bool) -> App {
     .fn_plugin(tower_plugin)
     .fn_plugin(enemy_plugin)
     .fn_plugin(projectile_plugin)
+    .fn_plugin(ui_plugin)
     .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
     .add_plugins(DefaultPickingPlugins)
     .fn_plugin(graphics_plugin)

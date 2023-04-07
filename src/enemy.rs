@@ -32,7 +32,7 @@ pub struct Portal {
 impl Portal {
     pub fn new() -> Self {
         Self {
-            spawn_timer: Timer::from_seconds(0.5, TimerMode::Repeating),
+            spawn_timer: Timer::from_seconds(10.5, TimerMode::Repeating),
         }
     }
 }
