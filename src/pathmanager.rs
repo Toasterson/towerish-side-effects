@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{Enemy, Proxy};
+use crate::{Enemy, Proxy, StateUpdateEvent};
 
 pub fn path_manager_plugin(app: &mut App) {
     app.add_event::<PathManagerUpdate>()
@@ -69,6 +69,7 @@ fn handle_despawn(
     mut commands: Commands,
     enemies: Query<(Entity, &GlobalTransform), With<Enemy>>,
     path_manager: Query<&PathManager>,
+    mut ev_state_update: EventWriter<StateUpdateEvent>,
 ) {
     if let Ok(manager) = path_manager.get_single() {
         for (enemy_entity, enemy_pos) in &enemies {
@@ -78,6 +79,7 @@ fn handle_despawn(
                 {
                     debug!("Entity {:?} reached end of path", enemy_entity);
                     commands.entity(enemy_entity).despawn_recursive();
+                    ev_state_update.send(StateUpdateEvent::EnemyReachedPortal);
                 }
             }
         }
