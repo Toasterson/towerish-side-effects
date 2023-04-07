@@ -1,4 +1,6 @@
-use bevy::{input::mouse::MouseWheel, prelude::*};
+use bevy::{
+    core_pipeline::bloom::BloomSettings, input::mouse::MouseWheel, prelude::*,
+};
 use bevy_atmosphere::prelude::*;
 use bevy_mod_picking::PickingCameraBundle;
 
@@ -9,15 +11,24 @@ pub fn camera_plugin(app: &mut App) {
 }
 
 fn spawn_camera(mut commands: Commands) {
-    commands
-        .spawn(Camera3dBundle {
+    commands.spawn((
+        Camera3dBundle {
             transform: Transform::from_xyz(-6.0, 18.1, 16.5)
                 .looking_at(Vec3::ZERO, Vec3::Y),
+            camera: Camera {
+                hdr: false,
+                ..Default::default()
+            },
             ..Default::default()
-        })
-        .insert(Name::new("Camera"))
-        .insert(AtmosphereCamera::default())
-        .insert(PickingCameraBundle::default());
+        },
+        Name::new("Camera"),
+        BloomSettings {
+            intensity: 0.25,
+            ..Default::default()
+        },
+        AtmosphereCamera::default(),
+        PickingCameraBundle::default(),
+    ));
 }
 
 fn camera_controls(

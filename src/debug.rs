@@ -11,6 +11,7 @@ pub fn debug_plugin(app: &mut App) {
                                                               // through geometry
 }
 
+#[allow(dead_code)]
 fn locate_lights(
     mut lines: ResMut<DebugLines>,
     lights: Query<&Transform, With<PointLight>>,

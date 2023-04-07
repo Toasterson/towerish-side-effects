@@ -1,21 +1,22 @@
 use bevy::{
-    ecs::{event::ManualEventIteratorWithId, query::QuerySingleError},
-    prelude::*,
-    ui::FocusPolicy,
+    ecs::query::QuerySingleError, prelude::*, ui::FocusPolicy, utils::FloatOrd,
 };
 use bevy_mod_picking::*;
 use strum::{Display as EnumDisplay, EnumIter, IntoEnumIterator};
 
-use crate::{graphics::CreateParticleSystem, GameAssets};
+use crate::{
+    graphics::CreateParticleSystem, Enemy, GameAssets, Lifetime, PhysicsBundle,
+    Projectile,
+};
 
 #[derive(Component)]
 pub struct TowerUIRoot;
 
-#[derive(Reflect, Component, Default)]
-#[reflect(Component)]
+#[derive(Component, Default)]
 pub struct Tower {
     pub shooting_timer: Timer,
     pub bullet_offset: Vec3,
+    pub effects: Vec<TowerEffects>,
 }
 
 #[derive(Reflect, Component, EnumIter, EnumDisplay, Copy, Clone)]
@@ -23,9 +24,70 @@ pub enum TowerType {
     Test,
 }
 
+#[derive(Debug, Reflect, Component, EnumIter, Copy, Clone)]
+pub enum TowerEffects {
+    SpeedShot(f32),
+    StrongShot(f32),
+    WeakShot(f32),
+    AOEBuff(f32),
+}
+
 pub fn tower_plugin(app: &mut App) {
     app.add_system(create_ui_on_selection)
-        .add_system(tower_button_clicked);
+        .add_system(tower_button_clicked)
+        .add_system(tower_shoot);
+}
+
+fn tower_shoot(
+    mut commands: Commands,
+    assets: Res<GameAssets>,
+    mut towers: Query<(Entity, &mut Tower, &GlobalTransform)>,
+    targets: Query<&GlobalTransform, With<Enemy>>,
+    time: Res<Time>,
+) {
+    for (tower_ent, mut tower, transform) in &mut towers {
+        tower.shooting_timer.tick(time.delta());
+        if tower.shooting_timer.just_finished() {
+            let bullet_spawn = transform.translation() + tower.bullet_offset;
+
+            let target_offset = transform.translation();
+
+            let direction = targets
+                .iter()
+                .min_by_key(|target_transform| {
+                    FloatOrd(Vec3::distance(
+                        target_transform.translation(),
+                        bullet_spawn,
+                    ))
+                })
+                .map(|closest_target| {
+                    closest_target.translation() - target_offset
+                });
+
+            if let Some(direction) = direction {
+                debug!("Shooting at target at: {}", direction);
+                commands.entity(tower_ent).with_children(|commands| {
+                    commands.spawn((
+                        PbrBundle {
+                            mesh: assets.get_capsule_shape().clone(),
+                            transform: Transform::from_xyz(0.0, 0.0, 0.0)
+                                .with_scale(Vec3::new(0.2, 0.2, 0.2)),
+                            ..default()
+                        },
+                        Lifetime {
+                            timer: Timer::from_seconds(1.0, TimerMode::Once),
+                        },
+                        Projectile {
+                            direction,
+                            speed: 10.0,
+                        },
+                        Name::new("Bullet"),
+                        PhysicsBundle::moving_entity().make_kinematic(),
+                    ));
+                });
+            }
+        }
+    }
 }
 
 fn create_ui_on_selection(
@@ -63,15 +125,15 @@ pub fn spawn_tower(
         )))
         .insert(Name::new("Default Tower"))
         .insert(Tower {
-            shooting_timer: Timer::from_seconds(0.5, TimerMode::Repeating),
+            shooting_timer: Timer::from_seconds(0.8, TimerMode::Repeating),
             bullet_offset: Vec3::new(0.0, 1.2, 0.0),
+            effects: vec![],
         })
         .insert(tt)
         .with_children(|commands| {
-            commands.spawn(PbrBundle {
-                mesh: assets.get_capsule_shape().clone(),
-                transform: Transform::from_xyz(0.0, -0.8, 0.0)
-                    .with_scale(Vec3::new(1.5, 1.5, 1.5)),
+            commands.spawn(SceneBundle {
+                scene: assets.tower_slice_a.clone(),
+                transform: Transform::from_xyz(0.0, -0.4, 0.0),
                 ..Default::default()
             });
         })

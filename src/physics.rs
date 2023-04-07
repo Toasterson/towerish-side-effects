@@ -13,12 +13,12 @@ pub struct PhysicsBundle {
 }
 
 impl PhysicsBundle {
-    pub fn moving_entity(size: Vec3) -> Self {
+    pub fn moving_entity() -> Self {
         Self {
             flags: ActiveEvents::COLLISION_EVENTS,
             active_collition_types: ActiveCollisionTypes::default()
                 | ActiveCollisionTypes::KINEMATIC_KINEMATIC,
-            collider: Collider::cuboid(size.x / 2., size.y / 2., size.z / 2.),
+            collider: Collider::ball(0.5),
             colliding_entities: CollidingEntities::default(),
             rigid_body: RigidBody::Dynamic,
             rotation_contraint: LockedAxes::ROTATION_LOCKED,
@@ -50,6 +50,11 @@ impl PhysicsBundle {
 
     pub fn make_fixed(mut self) -> Self {
         self.rigid_body = RigidBody::Fixed;
+        self
+    }
+
+    pub fn set_velocity(mut self, velocity: Velocity) -> Self {
+        self.velocity = velocity;
         self
     }
 }

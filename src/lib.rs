@@ -71,7 +71,7 @@ pub fn app(fullscreen: bool) -> App {
     .fn_plugin(world_plugin)
     .fn_plugin(tower_plugin)
     .fn_plugin(enemy_plugin)
-    .add_plugin(ProjectilePlugin)
+    .fn_plugin(projectile_plugin)
     .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
     .add_plugins(DefaultPickingPlugins)
     .fn_plugin(graphics_plugin)

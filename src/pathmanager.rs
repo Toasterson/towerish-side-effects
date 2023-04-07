@@ -54,6 +54,7 @@ impl PathManager {
 #[derive(Debug)]
 pub enum PathManagerUpdate {
     AddNode(Proxy),
+    #[allow(dead_code)]
     RemoveNode(Proxy),
 }
 
@@ -68,7 +69,7 @@ fn handle_despawn(
                 if enemy_pos.translation().distance(end.location)
                     <= manager.despawn_distance
                 {
-                    info!("Despawning Entity {:?}", enemy_entity);
+                    debug!("Entity {:?} reached end of path", enemy_entity);
                     commands.entity(enemy_entity).despawn_recursive();
                 }
             }

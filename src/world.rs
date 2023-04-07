@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use crate::{
     pathmanager::{PathManager, PathManagerUpdate},
-    GameAssets, PhysicsBundle, Portal,
+    GameAssets, Portal,
 };
 use bevy::{
     gltf::{Gltf, GltfNode},
@@ -128,7 +128,6 @@ fn handle_map_spawn(
     mut ev_asset: EventReader<AssetEvent<Gltf>>,
     mut ev_pathmanager_update: EventWriter<PathManagerUpdate>,
     mut commands: Commands,
-    mut materials: ResMut<Assets<StandardMaterial>>,
     assets: Res<GameAssets>,
     assets_gltf: Res<Assets<Gltf>>,
     nodes: Res<Assets<GltfNode>>,
@@ -138,15 +137,6 @@ fn handle_map_spawn(
             AssetEvent::Created { handle } => {
                 if handle == assets.map() {
                     let map = assets_gltf.get(handle).unwrap();
-
-                    let default_collider_color =
-                        materials.add(Color::NONE.into());
-                    let tower_base_selected_color =
-                        materials.add(Color::rgba(0.3, 0.9, 0.3, 0.9).into());
-                    let route_color =
-                        materials.add(Color::rgba(0.9, 0.9, 0.3, 0.9).into());
-
-                    let capsule_handle = assets.get_capsule_shape();
 
                     commands
                         .spawn((
@@ -165,8 +155,11 @@ fn handle_map_spawn(
                                     let node = nodes.get(node_handle).unwrap();
                                     commands.spawn((
                                         PbrBundle {
-                                            mesh: capsule_handle.clone(),
-                                            material: default_collider_color
+                                            mesh: assets
+                                                .get_capsule_shape()
+                                                .clone(),
+                                            material: assets
+                                                .default_collider_color
                                                 .clone(),
                                             transform: node
                                                 .transform
@@ -185,18 +178,22 @@ fn handle_map_spawn(
                                             tower_base
                                         )),
                                         Highlighting {
-                                            initial: default_collider_color
+                                            initial: assets
+                                                .default_collider_color
                                                 .clone(),
                                             hovered: Some(
-                                                tower_base_selected_color
+                                                assets
+                                                    .tower_base_selected_color
                                                     .clone(),
                                             ),
                                             pressed: Some(
-                                                tower_base_selected_color
+                                                assets
+                                                    .tower_base_selected_color
                                                     .clone(),
                                             ),
                                             selected: Some(
-                                                tower_base_selected_color
+                                                assets
+                                                    .tower_base_selected_color
                                                     .clone(),
                                             ),
                                         },
@@ -216,9 +213,7 @@ fn handle_map_spawn(
 
                                     if matches!(proxy.kind, ProxyKind::Route) {
                                         commands.spawn((
-                                            PbrBundle {
-                                                mesh: capsule_handle.clone(),
-                                                material: route_color.clone(),
+                                            SpatialBundle {
                                                 transform: node.transform,
                                                 ..Default::default()
                                             },
@@ -249,17 +244,6 @@ fn handle_map_spawn(
                                 }
                             }
                         });
-
-                    commands
-                        .spawn(SpatialBundle::from_transform(
-                            Transform::from_xyz(0.3, 2.0, 9.0),
-                        ))
-                        .insert(PhysicsBundle::moving_entity(Vec3::new(
-                            0.4, 0.4, 0.4,
-                        )))
-                        .insert(Name::new("Bouncy Capsule"))
-                        .insert(assets.get_capsule_shape().clone())
-                        .insert(tower_base_selected_color.clone());
                 }
             }
             x => info!("Asset Event {:?} not handled", x),
@@ -269,8 +253,6 @@ fn handle_map_spawn(
 
 fn spawn_basic_scene(
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
     mut rapier_config: ResMut<RapierConfiguration>,
 ) {
     // set gravity
@@ -289,13 +271,4 @@ fn spawn_basic_scene(
             ..default()
         })
         .insert(Name::new("Sun"));
-
-    commands
-        .spawn(PbrBundle {
-            mesh: meshes.add(shape::Plane::from_size(15.0).into()),
-            material: materials.add(Color::rgb(0.3, 0.3, 0.3).into()),
-            transform: Transform::from_xyz(0., -15., 0.),
-            ..default()
-        })
-        .insert(Name::new("Floor"));
 }

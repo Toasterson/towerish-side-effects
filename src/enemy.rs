@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{pathmanager::PathManager, GameAssets, Proxy};
+use crate::{pathmanager::PathManager, GameAssets, Health, PhysicsBundle};
 
 #[derive(Reflect, Component)]
 pub struct Waypoint {
@@ -32,7 +32,7 @@ pub struct Portal {
 impl Portal {
     pub fn new() -> Self {
         Self {
-            spawn_timer: Timer::from_seconds(1.0, TimerMode::Repeating),
+            spawn_timer: Timer::from_seconds(0.5, TimerMode::Repeating),
         }
     }
 }
@@ -44,7 +44,17 @@ pub fn enemy_plugin(app: &mut App) {
         .register_type::<PathProgress>()
         //        .add_startup_system(example_setup)
         .add_system(enemy_spawner)
-        .add_system(move_enemies.after(enemy_spawner));
+        .add_system(move_enemies.after(enemy_spawner))
+        .add_system(enemy_death);
+}
+
+fn enemy_death(mut commands: Commands, targets: Query<(Entity, &Health)>) {
+    for (ent, health) in &targets {
+        if health.value <= 0.0 {
+            info!("Enemy {:?} died", ent);
+            commands.entity(ent).despawn_recursive();
+        }
+    }
 }
 
 fn enemy_spawner(
@@ -71,8 +81,10 @@ fn enemy_spawner(
                             ..Default::default()
                         },
                         Name::new("Enemy"),
-                        Enemy { speed: 3. },
+                        Enemy { speed: 1.5 },
+                        Health { value: 2.0 },
                         PathProgress::new(path),
+                        PhysicsBundle::moving_entity().make_kinematic(),
                     ));
                 }
                 Err(_) => {}
