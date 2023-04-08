@@ -17,6 +17,8 @@ pub struct GameAssets {
     pub enemy_observer_drone: Handle<Gltf>,
     pub enemy_drone_animation: Handle<AnimationClip>,
     pub ball_projectile_color: Handle<StandardMaterial>,
+    pub barge: Handle<Gltf>,
+    pub barge_swaying: Handle<AnimationClip>,
 }
 
 pub enum Scenes {
@@ -80,6 +82,8 @@ fn asset_loading(
             emissive: Color::rgb_linear(2.0, 13.99, 5.32),
             ..Default::default()
         }),
+        barge: assets.load("enemy_cargo_hover_raft.glb"),
+        barge_swaying: assets.load("enemy_cargo_hover_raft.glb#Animation0"),
         shpere_shape: meshes.add(
             shape::Icosphere {
                 radius: 0.5,

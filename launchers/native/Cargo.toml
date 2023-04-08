@@ -10,3 +10,4 @@ bevy = "0.10"
 winit = "0.28.3"
 image = "0.24.6"
 bevy_egui = { version = "0.20.2", default-features = false, features = ["serde", "default_fonts", "arboard", "thread_local", "webbrowser"] }
+rand = "0.8.5"

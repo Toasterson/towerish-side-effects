@@ -1,6 +1,8 @@
-use std::time::Duration;
-
 use bevy::{gltf::Gltf, prelude::*};
+use rand::distributions::WeightedIndex;
+use rand::prelude::*;
+use std::time::Duration;
+use strum::{EnumIter, IntoEnumIterator};
 
 use crate::{
     pathmanager::PathManager, GameAssets, GameState, HitEvent, PhysicsBundle,
@@ -78,11 +80,19 @@ fn hit_event_handler(
     }
 }
 
+#[derive(Debug, Clone, Eq, PartialEq, PartialOrd, Ord, EnumIter)]
+enum EnemyTypes {
+    Drone,
+    Barge,
+}
+
 #[derive(Resource)]
 struct WaveState {
     game_state: GameState,
     timer: Timer,
     spawn_timer: Timer,
+    wave_count: i32,
+    enemy_weights: WeightedIndex<i32>,
 }
 
 impl Default for WaveState {
@@ -91,6 +101,8 @@ impl Default for WaveState {
             game_state: GameState::TowerUpgrade,
             timer: Timer::from_seconds(40.0, TimerMode::Once),
             spawn_timer: Timer::from_seconds(1.5, TimerMode::Repeating),
+            wave_count: 1,
+            enemy_weights: WeightedIndex::new([100, 15]).unwrap(),
         }
     }
 }
@@ -126,6 +138,7 @@ fn state_update_handler(
             }
             StateUpdateEvent::EndWave => {
                 wave_state.game_state = GameState::TowerUpgrade;
+                wave_state.wave_count += 1;
                 wave_state.spawn_timer.pause();
             }
             _ => {}
@@ -147,14 +160,56 @@ fn enemy_spawner(
             match paths.get_single() {
                 Ok((path, path_manager)) => {
                     if let Some(path_start) = path_manager.get_start() {
-                        let drone = assets_gltf
-                            .get(&assets.enemy_observer_drone)
-                            .unwrap();
-                        let mut player = AnimationPlayer::default();
+                        let mut rng = thread_rng();
 
-                        if let Some(animation) = drone.animations.first() {
-                            player.play(animation.clone_weak()).repeat();
-                        }
+                        let spawn_type: EnemyTypes = EnemyTypes::iter()
+                            .collect::<Vec<EnemyTypes>>()
+                            [wave_state.enemy_weights.sample(&mut rng)]
+                        .clone();
+
+                        let (speed, health, scene_handle, player) =
+                            match spawn_type {
+                                EnemyTypes::Drone => {
+                                    let drone = assets_gltf
+                                        .get(&assets.enemy_observer_drone)
+                                        .unwrap();
+                                    let mut player = AnimationPlayer::default();
+
+                                    if let Some(animation) =
+                                        drone.animations.first()
+                                    {
+                                        player
+                                            .play(animation.clone_weak())
+                                            .repeat();
+                                    }
+                                    (
+                                        1.5,
+                                        2.0,
+                                        drone.default_scene.clone().unwrap(),
+                                        player,
+                                    )
+                                }
+                                EnemyTypes::Barge => {
+                                    let barge =
+                                        assets_gltf.get(&assets.barge).unwrap();
+                                    let mut player = AnimationPlayer::default();
+
+                                    if let Some(animation) =
+                                        barge.animations.first()
+                                    {
+                                        player
+                                            .play(animation.clone_weak())
+                                            .repeat();
+                                    }
+
+                                    (
+                                        1.0,
+                                        4.0,
+                                        barge.default_scene.clone().unwrap(),
+                                        player,
+                                    )
+                                }
+                            };
 
                         commands
                             .spawn((
@@ -162,22 +217,19 @@ fn enemy_spawner(
                                     transform: Transform::from_translation(
                                         path_start.location,
                                     )
-                                    .with_scale(Vec3::new(1.0, 1.0, 1.0)),
+                                    .with_scale(Vec3::new(1.5, 1.5, 1.5)),
                                     ..Default::default()
                                 },
-                                Name::new("Enemy"),
-                                Enemy { speed: 1.5 },
-                                Health { value: 2.0 },
+                                Name::new(format!("Enemy {:?}", spawn_type)),
+                                Enemy { speed },
+                                Health { value: health },
                                 PathProgress::new(path),
                                 PhysicsBundle::moving_entity().make_kinematic(),
                             ))
                             .with_children(|commands| {
                                 commands.spawn((
                                     SceneBundle {
-                                        scene: drone
-                                            .default_scene
-                                            .clone()
-                                            .unwrap(),
+                                        scene: scene_handle,
                                         ..Default::default()
                                     },
                                     player,
