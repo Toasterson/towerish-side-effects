@@ -18,7 +18,9 @@ pub struct Tower {
 
 #[derive(Debug, Reflect, Component, EnumIter, EnumDisplay, Copy, Clone)]
 pub enum TowerType {
-    Test,
+    Gun,
+    Rocket,
+    Sniper,
 }
 
 pub enum TowerBuildEvent {
@@ -46,31 +48,48 @@ pub fn tower_plugin(app: &mut App) {
 pub fn tower_shoot(
     mut commands: Commands,
     assets: Res<GameAssets>,
-    mut towers: Query<(Entity, &mut Tower, &GlobalTransform)>,
-    targets: Query<&GlobalTransform, With<Enemy>>,
+    mut towers: Query<(Entity, &mut Tower, &TowerType, &GlobalTransform)>,
+    targets: Query<(Entity, &GlobalTransform), With<Enemy>>,
     time: Res<Time>,
 ) {
-    for (tower_ent, mut tower, transform) in &mut towers {
+    for (tower_ent, mut tower, tower_type, transform) in &mut towers {
         tower.shooting_timer.tick(time.delta());
         if tower.shooting_timer.just_finished() {
             let bullet_spawn = transform.translation() + tower.bullet_offset;
 
             let target_offset = transform.translation();
 
-            let direction = targets
-                .iter()
-                .min_by_key(|target_transform| {
-                    FloatOrd(Vec3::distance(
-                        target_transform.translation(),
-                        bullet_spawn,
-                    ))
-                })
-                .map(|closest_target| {
-                    closest_target.translation() - target_offset
-                });
+            let target = targets.iter().min_by_key(|target_transform| {
+                FloatOrd(Vec3::distance(
+                    target_transform.1.translation(),
+                    bullet_spawn,
+                ))
+            });
 
-            if let Some(direction) = direction {
-                debug!("Shooting at target at: {}", direction);
+            if let Some(target) = target {
+                debug!("Shooting at target at: {}", target.1.translation());
+
+                let (direction, speed, force, lifetime) = match tower_type {
+                    TowerType::Gun => (
+                        Some(target.1.translation() - target_offset),
+                        60.0,
+                        1.0,
+                        Timer::from_seconds(1.5, TimerMode::Once),
+                    ),
+                    TowerType::Rocket => (
+                        None,
+                        10.0,
+                        10.0,
+                        Timer::from_seconds(10.0, TimerMode::Once),
+                    ),
+                    TowerType::Sniper => (
+                        None,
+                        100.0,
+                        2.0,
+                        Timer::from_seconds(9.0, TimerMode::Once),
+                    ),
+                };
+
                 commands.entity(tower_ent).with_children(|commands| {
                     commands.spawn((
                         PbrBundle {
@@ -80,12 +99,16 @@ pub fn tower_shoot(
                                 .with_scale(Vec3::new(0.2, 0.2, 0.2)),
                             ..default()
                         },
-                        Lifetime {
-                            timer: Timer::from_seconds(1.5, TimerMode::Once),
-                        },
+                        Lifetime { timer: lifetime },
                         Projectile {
                             direction,
-                            speed: 60.0,
+                            speed,
+                            force,
+                            target: match tower_type {
+                                TowerType::Gun => None,
+                                TowerType::Rocket => Some(target.0),
+                                TowerType::Sniper => Some(target.0),
+                            },
                         },
                         Name::new("Bullet"),
                         PhysicsBundle::moving_entity().make_kinematic(),
@@ -102,17 +125,24 @@ pub fn spawn_tower(
     position: Vec3,
     tt: TowerType,
 ) -> Entity {
+    let shooting_timer = match tt {
+        TowerType::Gun => Timer::from_seconds(0.2, TimerMode::Repeating),
+        TowerType::Rocket => Timer::from_seconds(1.5, TimerMode::Repeating),
+        TowerType::Sniper => Timer::from_seconds(0.8, TimerMode::Repeating),
+    };
     commands
-        .spawn(SpatialBundle::from_transform(Transform::from_translation(
-            position,
-        )))
-        .insert(Name::new("Default Tower"))
-        .insert(Tower {
-            shooting_timer: Timer::from_seconds(0.2, TimerMode::Repeating),
-            bullet_offset: Vec3::new(0.0, 1.2, 0.0),
-            effects: vec![],
-        })
-        .insert(tt)
+        .spawn((
+            SpatialBundle::from_transform(Transform::from_translation(
+                position,
+            )),
+            Name::new("Default Tower"),
+            Tower {
+                shooting_timer,
+                bullet_offset: Vec3::new(0.0, 1.2, 0.0),
+                effects: vec![],
+            },
+            tt,
+        ))
         .with_children(|commands| {
             commands.spawn(SceneBundle {
                 scene: assets.tower_slice_a.clone(),

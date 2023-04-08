@@ -1,11 +1,10 @@
 use bevy::prelude::*;
 
-use crate::{Enemy, Proxy, StateUpdateEvent};
+use crate::Proxy;
 
 pub fn path_manager_plugin(app: &mut App) {
     app.add_event::<PathManagerUpdate>()
-        .add_system(handle_pathmanager_update)
-        .add_system(handle_despawn);
+        .add_system(handle_pathmanager_update);
 }
 
 #[derive(Component)]
@@ -64,28 +63,6 @@ pub enum PathManagerUpdate {
     #[allow(dead_code)]
     RemoveNode(Proxy),
 }
-
-fn handle_despawn(
-    mut commands: Commands,
-    enemies: Query<(Entity, &GlobalTransform), With<Enemy>>,
-    path_manager: Query<&PathManager>,
-    mut ev_state_update: EventWriter<StateUpdateEvent>,
-) {
-    if let Ok(manager) = path_manager.get_single() {
-        for (enemy_entity, enemy_pos) in &enemies {
-            if let Some(end) = &manager.get_end() {
-                if enemy_pos.translation().distance(end.location)
-                    <= manager.despawn_distance
-                {
-                    debug!("Entity {:?} reached end of path", enemy_entity);
-                    commands.entity(enemy_entity).despawn_recursive();
-                    ev_state_update.send(StateUpdateEvent::EnemyReachedPortal);
-                }
-            }
-        }
-    }
-}
-
 fn handle_pathmanager_update(
     mut ev_pathmanager_update: EventReader<PathManagerUpdate>,
     mut path_manager: Query<&mut PathManager>,

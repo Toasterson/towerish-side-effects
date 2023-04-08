@@ -4,7 +4,6 @@ use bevy::{gltf::Gltf, prelude::*};
 pub struct GameAssets {
     font: Handle<Font>,
     map: Handle<Gltf>,
-    map_collider: Handle<Mesh>,
     tower_base_bright: Handle<Scene>,
     tower_base_purple: Handle<Scene>,
     tower_base_bad: Handle<Scene>,
@@ -15,7 +14,8 @@ pub struct GameAssets {
     pub gun_a: Handle<Scene>,
     pub default_collider_color: Handle<StandardMaterial>,
     pub tower_base_selected_color: Handle<StandardMaterial>,
-    pub enemy_color: Handle<StandardMaterial>,
+    pub enemy_observer_drone: Handle<Gltf>,
+    pub enemy_drone_animation: Handle<AnimationClip>,
     pub ball_projectile_color: Handle<StandardMaterial>,
 }
 
@@ -64,7 +64,6 @@ fn asset_loading(
     commands.insert_resource(GameAssets {
         font: assets.load("QuattrocentoSans-Bold.ttf"),
         map: assets.load("map_a_0.2.glb"),
-        map_collider: assets.load("map_a_collision.glb#Mesh0/Primitive0"),
         tower_base_bright: assets.load("tower_base_a_bright.glb#Scene0"),
         tower_base_purple: assets.load("tower_base_a_purple.glb#Scene0"),
         tower_base_bad: assets.load("tower_base_bad.glb#Scene0"),
@@ -72,7 +71,9 @@ fn asset_loading(
         tower_slice_a: assets.load("tower_slice_a.glb#Scene0"),
         gun_a: assets.load("gun_a.glb#Scene0"),
         ring_a: assets.load("ring_a#Scene0"),
-        enemy_color: tower_base_selected_color.clone(),
+        enemy_observer_drone: assets.load("enemy_observer_drone.glb"),
+        enemy_drone_animation: assets
+            .load("enemy_observer_drone.glb#Animation0"),
         tower_base_selected_color,
         default_collider_color,
         ball_projectile_color: materials.add(StandardMaterial {

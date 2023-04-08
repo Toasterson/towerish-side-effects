@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPlugin};
 use bevy_mod_picking::Selection;
@@ -6,9 +8,9 @@ use strum::IntoEnumIterator;
 use crate::{TowerBuildEvent, TowerType};
 
 #[derive(Default, Resource)]
-pub struct UiState {
-    pub game_state: GameState,
-    pub wave_timer: Timer,
+struct UiState {
+    game_state: GameState,
+    wave_timer: Timer,
     enemies_killed: i32,
     money_in_bank: f32,
     health: f32,
@@ -17,6 +19,13 @@ pub struct UiState {
 pub enum StateUpdateEvent {
     EnemyKilled(f32),
     EnemyReachedPortal,
+    StartWave {
+        time_of_wave: f32,
+        spawn_interval: f32,
+    },
+    GameWon,
+    GameLost,
+    EndWave,
 }
 
 #[derive(Default)]
@@ -60,6 +69,25 @@ fn state_update_handler(
                     ui_state.game_state = GameState::GameLost;
                 }
             }
+            StateUpdateEvent::StartWave { time_of_wave, .. } => {
+                ui_state
+                    .wave_timer
+                    .set_duration(Duration::from_secs_f32(*time_of_wave));
+                ui_state.wave_timer.unpause();
+                ui_state.game_state = GameState::RunningWave;
+            }
+            StateUpdateEvent::GameWon => {
+                ui_state.game_state = GameState::GameWon;
+                ui_state.wave_timer.pause();
+            }
+            StateUpdateEvent::GameLost => {
+                ui_state.game_state = GameState::GameLost;
+                ui_state.wave_timer.pause();
+            }
+            StateUpdateEvent::EndWave => {
+                ui_state.game_state = GameState::TowerUpgrade;
+                ui_state.wave_timer.pause();
+            }
         }
     }
 }
@@ -91,6 +119,7 @@ fn main_game_screen(
     mut ui_state: ResMut<UiState>,
     mut egui_ctx: EguiContexts,
     mut ev_tower_build_writer: EventWriter<TowerBuildEvent>,
+    mut ev_state_update_writer: EventWriter<StateUpdateEvent>,
     mut current_selection: Local<CurrentSelection>,
     time: Res<Time>,
 ) {
@@ -120,9 +149,12 @@ fn main_game_screen(
                     ui.horizontal(|ui| {
                         ui.allocate_ui(egui::Vec2::new(30.0, 30.0), |ui| {
                             if ui.button("Run wave!").clicked() {
-                                ui_state.game_state = GameState::RunningWave;
-                                ui_state.wave_timer.reset();
-                                ui_state.wave_timer.unpause();
+                                ev_state_update_writer.send(
+                                    StateUpdateEvent::StartWave {
+                                        time_of_wave: 40.0,
+                                        spawn_interval: 1.5,
+                                    },
+                                );
                             }
                         });
                     });
@@ -163,7 +195,7 @@ fn main_game_screen(
                                         ev_tower_build_writer.send(
                                             TowerBuildEvent::Dispatch {
                                                 entity,
-                                                kind: TowerType::Test,
+                                                kind: build_option,
                                                 pos: transform.translation(),
                                             },
                                         );

@@ -9,20 +9,23 @@ pub struct Lifetime {
     pub timer: Timer,
 }
 
-#[derive(Reflect, Component, Default)]
-pub struct Projectile {
-    pub direction: Vec3,
-    pub speed: f32,
+pub struct HitEvent {
+    pub entity: Entity,
+    pub force: f32,
 }
 
-#[derive(Reflect, Component)]
-pub struct Health {
-    pub value: f32,
+#[derive(Reflect, Component, Default)]
+pub struct Projectile {
+    pub direction: Option<Vec3>,
+    pub speed: f32,
+    pub force: f32,
+    pub target: Option<Entity>,
 }
 
 pub fn projectile_plugin(app: &mut App) {
     app.register_type::<Lifetime>()
         .register_type::<Projectile>()
+        .add_event::<HitEvent>()
         .add_system(move_projectile.after(tower_shoot))
         .add_system(projectile_despawn)
         .add_system(projectile_collision_detection);
@@ -30,29 +33,43 @@ pub fn projectile_plugin(app: &mut App) {
 
 fn projectile_collision_detection(
     mut commands: Commands,
-    projectile_query: Query<Entity, With<Projectile>>,
-    mut colliding_entities_query: Query<(&mut Health, &CollidingEntities)>,
+    projectile_query: Query<(Entity, &Projectile)>,
+    mut colliding_entities_query: Query<(Entity, &CollidingEntities)>,
+    mut ev_hit_event: EventWriter<HitEvent>,
 ) {
-    for (mut health, colliding_entities) in colliding_entities_query.iter_mut()
-    {
-        for projectile in projectile_query.iter() {
+    for (entity, colliding_entities) in colliding_entities_query.iter_mut() {
+        for (projectile, projectile_info) in projectile_query.iter() {
             if colliding_entities.contains(projectile) {
                 debug!("Hit!");
                 commands.entity(projectile).despawn_recursive();
-                health.value -= 0.1;
+                ev_hit_event.send(HitEvent {
+                    entity,
+                    force: projectile_info.force,
+                });
             }
         }
     }
 }
 
 fn move_projectile(
-    mut projectiles: Query<(&Projectile, &mut Transform)>,
+    mut projectiles: Query<(&Projectile, &mut Transform, &GlobalTransform)>,
+    possible_targets: Query<(Entity, &GlobalTransform)>,
     time: Res<Time>,
 ) {
-    for (projectile, mut transform) in &mut projectiles {
-        transform.translation += projectile.direction.normalize()
-            * projectile.speed
-            * time.delta_seconds();
+    for (projectile, mut transform, location) in &mut projectiles {
+        if let Some(direction) = projectile.direction {
+            transform.translation +=
+                direction.normalize() * projectile.speed * time.delta_seconds();
+        } else if let Some(target) = projectile.target {
+            if let Ok(target_pos) = possible_targets.get(target) {
+                let direction =
+                    target_pos.1.translation() - location.translation();
+
+                transform.translation += direction.normalize()
+                    * projectile.speed
+                    * time.delta_seconds();
+            }
+        }
     }
 }
 

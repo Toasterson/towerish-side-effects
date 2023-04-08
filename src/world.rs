@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use crate::{
     pathmanager::{PathManager, PathManagerUpdate},
-    GameAssets, Portal,
+    GameAssets,
 };
 use bevy::{
     gltf::{Gltf, GltfNode},
@@ -239,7 +239,6 @@ fn handle_map_spawn(
                                             ..Default::default()
                                         },
                                         Name::new("Portal"),
-                                        Portal::new(),
                                     ));
                                 }
                             }
