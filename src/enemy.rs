@@ -217,7 +217,7 @@ fn enemy_spawner(
                                     transform: Transform::from_translation(
                                         path_start.location,
                                     )
-                                    .with_scale(Vec3::new(1.5, 1.5, 1.5)),
+                                    .with_scale(Vec3::new(3.0, 3.0, 3.0)),
                                     ..Default::default()
                                 },
                                 Name::new(format!("Enemy {:?}", spawn_type)),
