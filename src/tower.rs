@@ -1,4 +1,7 @@
+use std::time::Duration;
+
 use bevy::{prelude::*, utils::FloatOrd};
+use bevy_mod_picking::*;
 use strum::{Display as EnumDisplay, EnumIter};
 
 use crate::{
@@ -9,11 +12,12 @@ use crate::{
 #[derive(Component)]
 pub struct TowerUIRoot;
 
-#[derive(Component, Default)]
+#[derive(Component, Default, Clone)]
 pub struct Tower {
     pub shooting_timer: Timer,
     pub bullet_offset: Vec3,
-    pub effects: Vec<TowerEffects>,
+    pub upgrades: Vec<TowerUpgrades>,
+    pub side_effects: Vec<TowerSideEffects>,
 }
 
 #[derive(Debug, Reflect, Component, EnumIter, EnumDisplay, Copy, Clone)]
@@ -23,25 +27,85 @@ pub enum TowerType {
     Sniper,
 }
 
+impl TowerType {
+    pub fn get_price(&self, wave_multiplier: i32) -> f32 {
+        let wave_multiplier = if wave_multiplier <= 0 {
+            1
+        } else {
+            wave_multiplier
+        };
+        match self {
+            TowerType::Gun => 500.0 * wave_multiplier as f32,
+            TowerType::Rocket => 650.0 * wave_multiplier as f32,
+            TowerType::Sniper => 600.0 * wave_multiplier as f32,
+        }
+    }
+}
+
 pub enum TowerBuildEvent {
     Dispatch {
         entity: Entity,
         kind: TowerType,
         pos: Vec3,
     },
+    Upgrade {
+        entity: Entity,
+        effect: TowerUpgrades,
+        side_effect: Option<TowerSideEffects>,
+    },
+}
+
+#[derive(Debug, Reflect, Component, EnumIter, Copy, Clone, EnumDisplay)]
+pub enum TowerUpgrades {
+    BulletSpeedBuff(f32),
+    ForceBuff(f32),
+    ShootingSpeedBuff(f32),
+    AOE(f32),
+}
+
+impl TowerUpgrades {
+    pub fn get_price(&self, wave_multiplier: i32, force: i32) -> f32 {
+        let wave_multiplier = if wave_multiplier <= 0 {
+            1
+        } else {
+            wave_multiplier
+        };
+        match self {
+            TowerUpgrades::BulletSpeedBuff(_) => {
+                100. + (1.05 * (wave_multiplier as f32 * force as f32))
+            }
+            TowerUpgrades::ForceBuff(_) => {
+                100. + (1.05 * (wave_multiplier as f32 * force as f32))
+            }
+            TowerUpgrades::AOE(_) => {
+                200. + (2.05 * (wave_multiplier as f32 * force as f32))
+            }
+            TowerUpgrades::ShootingSpeedBuff(_) => {
+                500. + (5.05 * (wave_multiplier as f32 * force as f32))
+            }
+        }
+    }
 }
 
 #[derive(Debug, Reflect, Component, EnumIter, Copy, Clone)]
-pub enum TowerEffects {
-    SpeedShot(f32),
-    StrongShot(f32),
+pub enum TowerSideEffects {
     WeakShot(f32),
-    AOEBuff(f32),
+    HealShot(f32),
+}
+
+impl TowerSideEffects {
+    pub fn get_weights(wave_multiplier: i32, force: i32) -> Vec<f32> {
+        vec![
+            100.0,
+            0.5 * wave_multiplier as f32 * force as f32,
+            0.2 * wave_multiplier as f32 * force as f32,
+        ]
+    }
 }
 
 pub fn tower_plugin(app: &mut App) {
     app.add_event::<TowerBuildEvent>()
-        .add_system(tower_button_clicked)
+        .add_system(tower_build)
         .add_system(tower_shoot);
 }
 
@@ -69,24 +133,37 @@ pub fn tower_shoot(
             if let Some(target) = target {
                 debug!("Shooting at target at: {}", target.1.translation());
 
+                let mut speed_mod = 0.;
+                let mut force_mod = 0.;
+                let mut aoe_mod = 0.;
+
+                for upg in &tower.upgrades {
+                    match upg {
+                        TowerUpgrades::BulletSpeedBuff(v) => speed_mod += v,
+                        TowerUpgrades::ForceBuff(v) => force_mod += v,
+                        TowerUpgrades::AOE(v) => aoe_mod += v,
+                        TowerUpgrades::ShootingSpeedBuff(_) => {}
+                    }
+                }
+
                 let (direction, speed, force, lifetime) = match tower_type {
                     TowerType::Gun => (
                         Some(target.1.translation() - target_offset),
-                        60.0,
-                        1.0,
-                        Timer::from_seconds(1.5, TimerMode::Once),
+                        60.0 + speed_mod,
+                        1.0 + force_mod,
+                        Timer::from_seconds(1.5 * speed_mod, TimerMode::Once),
                     ),
                     TowerType::Rocket => (
                         None,
-                        10.0,
-                        10.0,
-                        Timer::from_seconds(10.0, TimerMode::Once),
+                        10.0 + speed_mod,
+                        10.0 + force_mod,
+                        Timer::from_seconds(10.0 * speed_mod, TimerMode::Once),
                     ),
                     TowerType::Sniper => (
                         None,
-                        100.0,
-                        2.0,
-                        Timer::from_seconds(9.0, TimerMode::Once),
+                        100.0 + speed_mod,
+                        2.0 + force_mod,
+                        Timer::from_seconds(9.0 * speed_mod, TimerMode::Once),
                     ),
                 };
 
@@ -131,16 +208,27 @@ pub fn spawn_tower(
     };
     commands
         .spawn((
-            SpatialBundle::from_transform(Transform::from_translation(
-                position,
-            )),
+            PbrBundle {
+                mesh: assets.get_capsule_shape().clone(),
+                material: assets.default_collider_color.clone(),
+                transform: Transform::from_translation(position),
+                ..Default::default()
+            },
             Name::new("Default Tower"),
             Tower {
                 shooting_timer,
                 bullet_offset: Vec3::new(0.0, 1.2, 0.0),
-                effects: vec![],
+                upgrades: vec![],
+                side_effects: vec![],
             },
             tt,
+            PickableBundle::default(),
+            Highlighting {
+                initial: assets.default_collider_color.clone(),
+                hovered: Some(assets.tower_base_selected_color.clone()),
+                pressed: Some(assets.tower_base_selected_color.clone()),
+                selected: Some(assets.tower_base_selected_color.clone()),
+            },
         ))
         .with_children(|commands| {
             commands.spawn(SceneBundle {
@@ -152,19 +240,48 @@ pub fn spawn_tower(
         .id()
 }
 
-fn tower_button_clicked(
+fn tower_build(
     mut ev_tower_build_events: EventReader<TowerBuildEvent>,
     mut commands: Commands,
     assets: Res<GameAssets>,
     mut particle_events: EventWriter<CreateParticleSystem>,
+    mut towers: Query<&mut Tower>,
 ) {
     for event in ev_tower_build_events.iter() {
-        let TowerBuildEvent::Dispatch { entity, kind, pos } = event;
-        commands.entity(*entity).despawn_recursive();
-        spawn_tower(&mut commands, &assets, *pos, *kind);
-        particle_events.send(CreateParticleSystem {
-            system: crate::graphics::ParticleSystemType::Landing,
-            transform: Transform::from_translation(*pos),
-        });
+        match event {
+            TowerBuildEvent::Dispatch { entity, kind, pos } => {
+                commands.entity(*entity).despawn_recursive();
+                spawn_tower(&mut commands, &assets, *pos, *kind);
+                particle_events.send(CreateParticleSystem {
+                    system: crate::graphics::ParticleSystemType::Landing,
+                    transform: Transform::from_translation(*pos),
+                });
+            }
+            TowerBuildEvent::Upgrade {
+                entity,
+                effect,
+                side_effect,
+            } => {
+                if let Ok(mut tower) = towers.get_mut(*entity) {
+                    match effect {
+                        TowerUpgrades::ShootingSpeedBuff(v) => {
+                            let speed_up = v / 10.0;
+                            let duration = tower
+                                .shooting_timer
+                                .duration()
+                                .clone()
+                                .saturating_sub(Duration::from_secs_f32(
+                                    speed_up,
+                                ));
+                            tower.shooting_timer.set_duration(duration);
+                        }
+                        effect => tower.upgrades.push(*effect),
+                    }
+                    if let Some(side_effect) = side_effect {
+                        tower.side_effects.push(*side_effect);
+                    }
+                }
+            }
+        }
     }
 }

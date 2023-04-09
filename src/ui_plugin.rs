@@ -1,11 +1,12 @@
 use std::time::Duration;
-
+use rand::distributions::WeightedIndex;
+use rand::prelude::*;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPlugin};
 use bevy_mod_picking::Selection;
 use strum::IntoEnumIterator;
 
-use crate::{TowerBuildEvent, TowerType};
+use crate::{Tower, TowerBuildEvent, TowerType, TowerUpgrades, TowerSideEffects};
 
 #[derive(Default, Resource)]
 struct UiState {
@@ -14,6 +15,8 @@ struct UiState {
     enemies_killed: i32,
     money_in_bank: f32,
     health: f32,
+    waves_finished: i32,
+    force_number: String,
 }
 
 pub enum StateUpdateEvent {
@@ -50,7 +53,7 @@ pub fn ui_plugin(app: &mut App) {
 
 #[derive(Default)]
 struct CurrentSelection {
-    entity: Option<(Entity, GlobalTransform)>,
+    entity: Option<(Entity, GlobalTransform, Option<Tower>, Option<TowerType>)>,
 }
 
 fn state_update_handler(
@@ -87,6 +90,7 @@ fn state_update_handler(
             StateUpdateEvent::EndWave => {
                 ui_state.game_state = GameState::TowerUpgrade;
                 ui_state.wave_timer.pause();
+                ui_state.waves_finished += 1;
             }
         }
     }
@@ -114,8 +118,26 @@ fn stat_window(ui_state: Res<UiState>, mut egui_ctx: EguiContexts) {
         });
 }
 
+fn get_side_effect(wave_multiplier: i32, force: i32) -> Option<TowerSideEffects> {
+
+                        let mut rng = thread_rng();
+    let weights = WeightedIndex::new(TowerSideEffects::get_weights(wave_multiplier, force)).unwrap();
+    let options = [
+        None,
+        Some(TowerSideEffects::WeakShot(force as f32)),
+        Some(TowerSideEffects::HealShot(force as f32)),
+    ];
+    options[weights.sample(&mut rng)]
+}
+
 fn main_game_screen(
-    selections: Query<(Entity, &Selection, &GlobalTransform)>,
+    selections: Query<(
+        Entity,
+        &Selection,
+        &GlobalTransform,
+        Option<&TowerType>,
+        Option<&Tower>,
+    )>,
     mut ui_state: ResMut<UiState>,
     mut egui_ctx: EguiContexts,
     mut ev_tower_build_writer: EventWriter<TowerBuildEvent>,
@@ -132,9 +154,15 @@ fn main_game_screen(
     }
     let ctx = egui_ctx.ctx_mut();
     if !ctx.wants_pointer_input() {
-        for (entity, selection, transform) in &selections {
+        for (entity, selection, transform, tower_type, tower) in &selections {
             if selection.selected() {
-                current_selection.entity = Some((entity, transform.clone()));
+                info!("Selected entity {:?}", entity);
+                current_selection.entity = Some((
+                    entity,
+                    transform.clone(),
+                    tower.clone().map(|t| t.clone()),
+                    tower_type.clone().map(|tt| tt.clone()),
+                ));
             }
         }
     }
@@ -160,7 +188,6 @@ fn main_game_screen(
                     });
 
                     ui.horizontal(|ui| {
-                        ui.separator();
                         ui.allocate_ui(egui::Vec2::new(30.0, 30.0), |ui| {
                             if ui_state.money_in_bank >= 100.0 {
                                 if ui.button("Heal").clicked() {
@@ -174,38 +201,97 @@ fn main_game_screen(
                     });
 
                     ui.vertical(|ui| {
-                        if let Some((entity, transform)) =
-                            current_selection.entity
+                        if let Some((entity, transform, tower, _tower_type)) =
+                            current_selection.entity.clone()
                         {
                             ui.separator();
-                            ui.label(format!(
-                                "Build options for {:#?}",
-                                entity
-                            ));
-                            for build_option in TowerType::iter() {
-                                if ui_state.money_in_bank >= 500.0 {
-                                    if ui
-                                        .button(egui::RichText::new(
-                                            build_option.to_string(),
-                                        ))
-                                        .clicked()
-                                    {
-                                        info!("Fired build event");
-                                        ui_state.money_in_bank -= 500.0;
-                                        ev_tower_build_writer.send(
-                                            TowerBuildEvent::Dispatch {
-                                                entity,
-                                                kind: build_option,
-                                                pos: transform.translation(),
-                                            },
-                                        );
-                                        current_selection.entity = None;
+
+                            if let Some(tower) = tower {
+                                ui.label(format!(
+                                    "Upgrade option for tower {:#?}",
+                                    entity
+                                ));
+                                ui.horizontal_top(|ui| {
+                                    if tower.upgrades.len() > 0 {
+                                        ui.label(format!("Existing upgrades: {:?}", tower.upgrades));
+                                        ui.allocate_space(egui::Vec2::new(10.0, 10.0));
+                                        ui.label(format!("Side effects: {:?}", tower.side_effects));
                                     }
-                                } else {
-                                    ui.label(format!(
-                                        "{}: Not enough money",
-                                        build_option.to_string()
-                                    ));
+                                });
+                                ui.horizontal(|ui| {
+                                    ui.vertical(|ui| {
+                                        for upgrade_option in TowerUpgrades::iter() {
+                                            let price = upgrade_option
+                                                .get_price(ui_state.waves_finished, ui_state.force_number.parse().unwrap_or(1));
+
+                                            if ui_state.money_in_bank >= price {
+
+                                                ui.allocate_ui(egui::Vec2::new(100.0, 30.0), |ui|{
+                                                    if ui
+                                                        .button(egui::RichText::new(
+                                                            upgrade_option.to_string(),
+                                                        ))
+                                                        .clicked()
+                                                    {
+                                                        info!("Fired upgrade event");
+                                                        ui_state.money_in_bank -= price;
+                                                        ev_tower_build_writer.send(
+                                                            TowerBuildEvent::Upgrade {
+                                                                entity,
+                                                                effect: upgrade_option,
+                                                                side_effect: get_side_effect(ui_state.waves_finished, ui_state.force_number.parse().unwrap_or(1)),
+                                                            },
+                                                        );
+                                                        current_selection.entity = None;
+                                                    }
+                                                    ui.label(format!("Cost: {:.2}", price));
+                                                });
+                                            } else  {
+                                                ui.label(format!("Not enough money for upgrade: {} need {:.2}", upgrade_option, price));
+                                            }
+                                        }
+                                    });
+                                    
+                                    ui.horizontal(|ui| {
+                                        ui.label("Force of the upgrade");
+                                        ui.text_edit_singleline(&mut ui_state.force_number);
+                                    });
+                                });
+                            } else {
+                                ui.label(format!(
+                                    "Build options for {:#?}",
+                                    entity
+                                ));
+                                for build_option in TowerType::iter() {
+                                    let price = build_option
+                                        .get_price(ui_state.waves_finished);
+
+                                    if ui_state.money_in_bank >= price {
+                                        if ui
+                                            .button(egui::RichText::new(
+                                                build_option.to_string(),
+                                            ))
+                                            .clicked()
+                                        {
+                                            info!("Fired build event");
+                                            ui_state.money_in_bank -= price;
+                                            ev_tower_build_writer.send(
+                                                TowerBuildEvent::Dispatch {
+                                                    entity,
+                                                    kind: build_option,
+                                                    pos: transform
+                                                        .translation(),
+                                                },
+                                            );
+                                            current_selection.entity = None;
+                                        }
+                                    } else {
+                                        ui.label(format!(
+                                            "{}: Not enough money need {:.2}",
+                                            build_option.to_string(),
+                                            price,
+                                        ));
+                                    }
                                 }
                             }
                             ui.separator();
