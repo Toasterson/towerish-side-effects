@@ -52,11 +52,19 @@ fn projectile_collision_detection(
 }
 
 fn move_projectile(
-    mut projectiles: Query<(&Projectile, &mut Transform, &GlobalTransform)>,
+    mut commands: Commands,
+    mut projectiles: Query<(
+        Entity,
+        &Projectile,
+        &mut Transform,
+        &GlobalTransform,
+    )>,
     possible_targets: Query<(Entity, &GlobalTransform)>,
     time: Res<Time>,
 ) {
-    for (projectile, mut transform, location) in &mut projectiles {
+    for (projectile_ent, projectile, mut transform, location) in
+        &mut projectiles
+    {
         if let Some(direction) = projectile.direction {
             transform.translation +=
                 direction.normalize() * projectile.speed * time.delta_seconds();
@@ -68,6 +76,8 @@ fn move_projectile(
                 transform.translation += direction.normalize()
                     * projectile.speed
                     * time.delta_seconds();
+            } else {
+                commands.entity(projectile_ent).despawn_recursive();
             }
         }
     }
