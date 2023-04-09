@@ -92,11 +92,10 @@ pub fn tower_shoot(
 
                 commands.entity(tower_ent).with_children(|commands| {
                     commands.spawn((
-                        PbrBundle {
-                            mesh: assets.shpere_shape.clone(),
-                            material: assets.ball_projectile_color.clone(),
+                        SceneBundle {
+                            scene: assets.bullet_scene.clone(),
                             transform: Transform::from_xyz(0.0, 0.0, 0.0)
-                                .with_scale(Vec3::new(0.2, 0.2, 0.2)),
+                                .with_scale(Vec3::new(4.0, 4.0, 4.0)),
                             ..default()
                         },
                         Lifetime { timer: lifetime },
