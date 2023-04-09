@@ -43,6 +43,7 @@ pub const LAUNCHER_TITLE: &str = "Towering Sideffects";
 
 pub fn app(fullscreen: bool) -> App {
     let mut wgpu_settings = WgpuSettings::default();
+    #[cfg(feature = "particles")]
     wgpu_settings
         .features
         .set(WgpuFeatures::VERTEX_WRITABLE_STORAGE, true);

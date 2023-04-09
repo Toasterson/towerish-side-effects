@@ -5,7 +5,7 @@ edition = "2021"
 workspace = "../.."
 
 [dependencies]
-towerish_side_effects = { path = "../.." }
+towerish_side_effects = { path = "../..", features=["particles"] }
 bevy = "0.10"
 winit = "0.28.3"
 image = "0.24.6"
