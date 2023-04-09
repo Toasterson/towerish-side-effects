@@ -1,12 +1,14 @@
-use std::time::Duration;
-use rand::distributions::WeightedIndex;
-use rand::prelude::*;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPlugin};
 use bevy_mod_picking::Selection;
+use rand::distributions::WeightedIndex;
+use rand::prelude::*;
+use std::time::Duration;
 use strum::IntoEnumIterator;
 
-use crate::{Tower, TowerBuildEvent, TowerType, TowerUpgrades, TowerSideEffects};
+use crate::{
+    Tower, TowerBuildEvent, TowerSideEffects, TowerType, TowerUpgrades,
+};
 
 #[derive(Default, Resource)]
 struct UiState {
@@ -118,10 +120,16 @@ fn stat_window(ui_state: Res<UiState>, mut egui_ctx: EguiContexts) {
         });
 }
 
-fn get_side_effect(wave_multiplier: i32, force: i32) -> Option<TowerSideEffects> {
-
-                        let mut rng = thread_rng();
-    let weights = WeightedIndex::new(TowerSideEffects::get_weights(wave_multiplier, force)).unwrap();
+fn get_side_effect(
+    wave_multiplier: i32,
+    force: i32,
+) -> Option<TowerSideEffects> {
+    let mut rng = thread_rng();
+    let weights = WeightedIndex::new(TowerSideEffects::get_weights(
+        wave_multiplier,
+        force,
+    ))
+    .unwrap();
     let options = [
         None,
         Some(TowerSideEffects::WeakShot(force as f32)),
@@ -251,7 +259,6 @@ fn main_game_screen(
                                             }
                                         }
                                     });
-                                    
                                     ui.horizontal(|ui| {
                                         ui.label("Force of the upgrade");
                                         ui.text_edit_singleline(&mut ui_state.force_number);
