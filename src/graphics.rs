@@ -1,22 +1,33 @@
 use bevy::prelude::*;
+#[cfg(feature = "particles")]
 use bevy_hanabi::prelude::*;
+
+#[cfg(feature = "particles")]
 use bevy_vfx_bag::{post_processing::lut::Lut, BevyVfxBagPlugin};
 
 pub fn graphics_plugin(app: &mut App) {
+    #[cfg(feature = "particles")]
     app.add_plugin(BevyVfxBagPlugin::default());
+    #[cfg(feature = "particles")]
     app.add_plugin(HanabiPlugin);
+    #[cfg(feature = "particles")]
     app.add_startup_system(setup_particle_systems);
     app.add_event::<CreateParticleSystem>();
+    #[cfg(feature = "particles")]
     app.insert_resource(ParticleSystems {
         landing: Entity::PLACEHOLDER,
         muzzle_flash: Entity::PLACEHOLDER,
         impact: Entity::PLACEHOLDER,
     });
+
+    #[cfg(feature = "particles")]
     app.add_system(test_luts);
+    #[cfg(feature = "particles")]
     app.add_system(particle_system_events);
 }
 
 // Cycle through some preset LUTs.
+#[cfg(feature = "particles")]
 fn test_luts(
     mut choice: Local<usize>,
     mut commands: Commands,
@@ -75,6 +86,7 @@ pub struct ParticleSystems {
     impact: Entity,
 }
 
+#[cfg(feature = "particles")]
 fn setup_particle_systems(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
@@ -136,6 +148,7 @@ fn setup_particle_systems(
         .id();
 }
 
+#[cfg(feature = "particles")]
 fn particle_system_events(
     mut events: EventReader<CreateParticleSystem>,
     systems: Res<ParticleSystems>,
