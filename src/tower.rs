@@ -151,19 +151,19 @@ pub fn tower_shoot(
                         Some(target.1.translation() - target_offset),
                         60.0 + speed_mod,
                         1.0 + force_mod,
-                        Timer::from_seconds(1.5 * speed_mod, TimerMode::Once),
+                        Timer::from_seconds(1.5, TimerMode::Once),
                     ),
                     TowerType::Rocket => (
                         None,
                         10.0 + speed_mod,
                         10.0 + force_mod,
-                        Timer::from_seconds(10.0 * speed_mod, TimerMode::Once),
+                        Timer::from_seconds(10.0, TimerMode::Once),
                     ),
                     TowerType::Sniper => (
                         None,
                         100.0 + speed_mod,
                         2.0 + force_mod,
-                        Timer::from_seconds(9.0 * speed_mod, TimerMode::Once),
+                        Timer::from_seconds(9.0, TimerMode::Once),
                     ),
                 };
 
