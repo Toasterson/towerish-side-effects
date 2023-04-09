@@ -19,6 +19,8 @@ pub struct GameAssets {
     pub ball_projectile_color: Handle<StandardMaterial>,
     pub barge: Handle<Gltf>,
     pub barge_swaying: Handle<AnimationClip>,
+    pub bullet_scene: Handle<Scene>,
+    pub sniper_bullet_scene: Handle<Scene>,
 }
 
 pub enum Scenes {
@@ -84,6 +86,8 @@ fn asset_loading(
         }),
         barge: assets.load("enemy_cargo_hover_raft.glb"),
         barge_swaying: assets.load("enemy_cargo_hover_raft.glb#Animation0"),
+        bullet_scene: assets.load("projectile_gun_bullet.glb#Scene0"),
+        sniper_bullet_scene: assets.load("projectile_sniper_bullet.glb#Scene0"),
         shpere_shape: meshes.add(
             shape::Icosphere {
                 radius: 0.5,
