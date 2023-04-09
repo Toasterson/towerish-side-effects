@@ -1,9 +1,12 @@
 use bevy::prelude::*;
 #[cfg(feature = "particles")]
 use bevy_hanabi::prelude::*;
+use bevy_vfx_bag::{
+    post_processing::{lut::Lut, wave::Wave},
+    BevyVfxBagPlugin,
+};
 
-#[cfg(feature = "particles")]
-use bevy_vfx_bag::{post_processing::lut::Lut, BevyVfxBagPlugin};
+use crate::StateUpdateEvent;
 
 pub fn graphics_plugin(app: &mut App) {
     #[cfg(feature = "particles")]
@@ -22,8 +25,9 @@ pub fn graphics_plugin(app: &mut App) {
 
     #[cfg(feature = "particles")]
     app.add_system(test_luts);
-    #[cfg(feature = "particles")]
-    app.add_system(particle_system_events);
+    app.add_system(particle_system_events)
+        .add_system(health_loss_effects)
+        .add_system(camera_effect_decay);
 }
 
 // Cycle through some preset LUTs.
@@ -171,4 +175,42 @@ fn particle_system_events(
         *transform = new_transform.clone();
         spawner.reset();
     }
+}
+
+fn health_loss_effects(
+    mut events: EventReader<StateUpdateEvent>,
+    mut commands: Commands,
+    query: Query<Entity, With<Camera>>,
+) {
+    if events
+        .iter()
+        .filter(|w| match w {
+            StateUpdateEvent::EnemyReachedPortal => true,
+            _ => false,
+        })
+        .count()
+        > 0
+    {
+        commands.get_or_spawn(query.single()).insert(Wave {
+            waves_x: 25.0,
+            waves_y: 25.0,
+            speed_x: 30.,
+            speed_y: 30.,
+            amplitude_x: 0.01,
+            amplitude_y: 0.13,
+        });
+    }
+}
+
+fn camera_effect_decay(
+    mut commands: Commands,
+    mut query: Query<(Entity, &mut Wave), With<Camera>>,
+) {
+    for (entity, mut wave) in query.iter_mut() {
+    wave.amplitude_y *= 0.9;
+    wave.amplitude_x *= 0.9;
+    if wave.amplitude_x < 0.001 {
+        commands.entity(entity).remove::<Wave>();
+    }
+}
 }
