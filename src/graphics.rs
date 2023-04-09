@@ -1,10 +1,11 @@
 use bevy::prelude::*;
-#[cfg(feature = "particles")]
-use bevy_hanabi::prelude::*;
 use bevy_vfx_bag::{
     post_processing::{lut::Lut, wave::Wave},
     BevyVfxBagPlugin,
 };
+
+#[cfg(feature = "particles")]
+use bevy_hanabi::prelude::*;
 
 use crate::StateUpdateEvent;
 
@@ -23,15 +24,15 @@ pub fn graphics_plugin(app: &mut App) {
         impact: Entity::PLACEHOLDER,
     });
 
-    #[cfg(feature = "particles")]
-    app.add_system(test_luts);
-    app.add_system(particle_system_events)
+    app.add_system(test_luts)
         .add_system(health_loss_effects)
         .add_system(camera_effect_decay);
+
+    #[cfg(feature = "particles")]
+    app.add_system(particle_system_events);
 }
 
 // Cycle through some preset LUTs.
-#[cfg(feature = "particles")]
 fn test_luts(
     mut choice: Local<usize>,
     mut commands: Commands,
@@ -70,6 +71,7 @@ fn test_luts(
     }
 }
 
+#[cfg(feature = "particles")]
 #[derive(Reflect, PartialEq)]
 pub enum ParticleSystemType {
     Landing,
@@ -77,12 +79,14 @@ pub enum ParticleSystemType {
     Impact,
 }
 
+#[cfg(feature = "particles")]
 #[derive(Resource, Reflect)]
 pub struct CreateParticleSystem {
     pub system: ParticleSystemType,
     pub transform: Transform,
 }
 
+#[cfg(feature = "particles")]
 #[derive(Resource, Reflect)]
 pub struct ParticleSystems {
     landing: Entity,
@@ -197,7 +201,7 @@ fn health_loss_effects(
             speed_x: 30.,
             speed_y: 30.,
             amplitude_x: 0.01,
-            amplitude_y: 0.13,
+            amplitude_y: 0.03,
         });
     }
 }
