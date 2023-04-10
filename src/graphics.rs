@@ -10,19 +10,19 @@ use bevy_hanabi::prelude::*;
 use crate::StateUpdateEvent;
 
 pub fn graphics_plugin(app: &mut App) {
-    #[cfg(feature = "particles")]
-    app.add_plugin(BevyVfxBagPlugin::default());
-    #[cfg(feature = "particles")]
-    app.add_plugin(HanabiPlugin);
-    #[cfg(feature = "particles")]
-    app.add_startup_system(setup_particle_systems);
     app.add_event::<CreateParticleSystem>();
     #[cfg(feature = "particles")]
-    app.insert_resource(ParticleSystems {
-        landing: Entity::PLACEHOLDER,
-        muzzle_flash: Entity::PLACEHOLDER,
-        impact: Entity::PLACEHOLDER,
-    });
+    {
+        app.add_plugin(BevyVfxBagPlugin::default());
+        app.add_plugin(HanabiPlugin);
+        app.add_startup_system(setup_particle_systems);
+        app.insert_resource(ParticleSystems {
+            landing: Entity::PLACEHOLDER,
+            muzzle_flash: Entity::PLACEHOLDER,
+            impact: Entity::PLACEHOLDER,
+            portal: Entity::PLACEHOLDER,
+        });
+    }
 
     app.add_system(test_luts)
         .add_system(health_loss_effects)
@@ -92,6 +92,7 @@ pub struct ParticleSystems {
     landing: Entity,
     muzzle_flash: Entity,
     impact: Entity,
+    portal: Entity,
 }
 
 #[cfg(feature = "particles")]
@@ -154,6 +155,57 @@ fn setup_particle_systems(
         .spawn(ParticleEffectBundle::new(effect).with_spawner(spawner))
         .insert(Name::new("Part Effect"))
         .id();
+
+    // Portal
+    let mut color_gradient1 = Gradient::new();
+    color_gradient1.add_key(0.0, Vec4::new(4.0, 4.0, 4.0, 1.0));
+    color_gradient1.add_key(0.1, Vec4::new(4.0, 4.0, 0.0, 1.0));
+    color_gradient1.add_key(0.9, Vec4::new(4.0, 0.0, 0.0, 1.0));
+    color_gradient1.add_key(1.0, Vec4::new(4.0, 0.0, 0.0, 0.0));
+
+    let mut size_gradient1 = Gradient::new();
+    size_gradient1.add_key(0.3, Vec2::new(0.2, 0.02));
+    size_gradient1.add_key(1.0, Vec2::splat(0.0));
+
+    let effect1 = effects.add(
+        EffectAsset {
+            name: "portal".to_string(),
+            capacity: 32768,
+            spawner: Spawner::rate(5000.0.into()),
+            ..Default::default()
+        }
+        .init(InitPositionCircleModifier {
+            center: Vec3::ZERO,
+            axis: Vec3::Z,
+            radius: 4.,
+            dimension: ShapeDimension::Surface,
+        })
+        .init(InitLifetimeModifier {
+            // Give a bit of variation by randomizing the lifetime per particle
+            lifetime: Value::Uniform((0.6, 1.3)),
+        })
+        .update(LinearDragModifier { drag: 2. })
+        .update(RadialAccelModifier::constant(Vec3::ZERO, -6.0))
+        .update(TangentAccelModifier::constant(Vec3::ZERO, Vec3::Z, 30.))
+        .render(ColorOverLifetimeModifier {
+            gradient: color_gradient1,
+        })
+        .render(SizeOverLifetimeModifier {
+            gradient: size_gradient1,
+        })
+        .render(OrientAlongVelocityModifier),
+    );
+
+    particle_systems.portal = commands
+        .spawn((
+            Name::new("portal"),
+            ParticleEffectBundle {
+                effect: ParticleEffect::new(effect1),
+                transform: Transform::IDENTITY,
+                ..Default::default()
+            },
+        ))
+        .id();
 }
 
 #[cfg(feature = "particles")]
@@ -211,10 +263,16 @@ fn camera_effect_decay(
     mut query: Query<(Entity, &mut Wave), With<Camera>>,
 ) {
     for (entity, mut wave) in query.iter_mut() {
-    wave.amplitude_x *= 0.9;
-    wave.speed_x *= 0.95;
-    if wave.amplitude_x < 0.001 {
-        commands.entity(entity).remove::<Wave>();
+        wave.amplitude_x *= 0.9;
+        wave.speed_x *= 0.95;
+        if wave.amplitude_x < 0.001 {
+            commands.entity(entity).remove::<Wave>();
+        }
     }
 }
+
+pub fn portal_effect(
+    mut effects: ResMut<Assets<EffectAsset>>,
+) -> Handle<EffectAsset> {
+    todo!()
 }
