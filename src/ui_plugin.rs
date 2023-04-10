@@ -10,6 +10,14 @@ use crate::{
     Tower, TowerBuildEvent, TowerSideEffects, TowerType, TowerUpgrades,
 };
 
+fn min1(value: f32) -> f32 {
+    if value <= 0.0 {
+        1.
+    } else {
+        value
+    }
+}
+
 #[derive(Default, Resource)]
 struct UiState {
     game_state: GameState,
@@ -195,7 +203,7 @@ fn main_game_screen(
                                 if ui.button("Run wave!").clicked() {
                                     ev_state_update_writer.send(
                                         StateUpdateEvent::StartWave {
-                                            time_of_wave: 40.0,
+                                            time_of_wave: 40.0 * min1(ui_state.waves_finished as f32),
                                             spawn_interval: 1.5,
                                         },
                                     );
