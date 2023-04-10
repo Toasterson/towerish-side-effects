@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
 use crate::{
+    graphics::CreateParticleSystem,
     pathmanager::{PathManager, PathManagerUpdate},
     GameAssets,
 };
@@ -125,6 +126,7 @@ pub fn world_plugin(app: &mut App) {
 }
 
 fn handle_map_spawn(
+    mut ev_particles_writer: EventWriter<CreateParticleSystem>,
     mut ev_asset: EventReader<AssetEvent<Gltf>>,
     mut ev_pathmanager_update: EventWriter<PathManagerUpdate>,
     mut commands: Commands,
@@ -235,11 +237,16 @@ fn handle_map_spawn(
                                     let node = nodes.get(node_handle).unwrap();
                                     commands.spawn((
                                         SpatialBundle {
-                                            transform: node.transform,
+                                            transform: node.transform.clone(),
                                             ..Default::default()
                                         },
                                         Name::new("Portal"),
                                     ));
+
+                                    ev_particles_writer.send(CreateParticleSystem{
+                                        system: crate::graphics::ParticleSystemType::Portal,
+                                        transform: node.transform,
+                                    });
                                 }
                             }
                         });

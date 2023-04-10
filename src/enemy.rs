@@ -69,12 +69,26 @@ fn hit_event_handler(
     for event in ev_hit.iter() {
         for (ent, mut health) in &mut enemies {
             if ent == event.entity {
-                health.value -= 0.1 * event.force;
+                let mut force = event.force;
+
+                for side_effect in &event.side_effects {
+                    match side_effect {
+                        crate::TowerSideEffects::WeakShot(value) => {
+                            force -= value
+                        }
+                        crate::TowerSideEffects::HealShot(value) => {
+                            health.value += value
+                        }
+                    }
+                }
+
                 if health.value <= 0.0 {
                     info!("Enemy {:?} died", ent);
                     commands.entity(ent).despawn_recursive();
                     ev_status_update.send(StateUpdateEvent::EnemyKilled(50.0));
                 }
+
+                health.value -= 0.1 * force;
             }
         }
     }

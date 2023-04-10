@@ -20,6 +20,19 @@ pub struct Tower {
     pub side_effects: Vec<TowerSideEffects>,
 }
 
+#[derive(Component, Clone)]
+pub struct SideEffectBundle {
+    pub side_effects: Vec<TowerSideEffects>,
+}
+
+impl SideEffectBundle {
+    pub fn from_tower(tower: &Tower) -> Self {
+        Self {
+            side_effects: tower.side_effects.clone(),
+        }
+    }
+}
+
 #[derive(Debug, Reflect, Component, EnumIter, EnumDisplay, Copy, Clone)]
 pub enum TowerType {
     Gun,
@@ -85,6 +98,16 @@ impl TowerUpgrades {
             }
         }
     }
+    pub fn set_force(self, force: f32) -> Self {
+        match self {
+            TowerUpgrades::BulletSpeedBuff(_) => Self::BulletSpeedBuff(force),
+            TowerUpgrades::ForceBuff(_) => Self::ForceBuff(force),
+            TowerUpgrades::ShootingSpeedBuff(_) => {
+                Self::ShootingSpeedBuff(force)
+            }
+            TowerUpgrades::AOE(_) => Self::AOE(force),
+        }
+    }
 }
 
 #[derive(Debug, Reflect, Component, EnumIter, Copy, Clone)]
@@ -95,6 +118,12 @@ pub enum TowerSideEffects {
 
 impl TowerSideEffects {
     pub fn get_weights(wave_multiplier: i32, force: i32) -> Vec<f32> {
+        let wave_multiplier = if wave_multiplier <= 0 {
+            1
+        } else {
+            wave_multiplier
+        };
+
         vec![
             100.0,
             0.5 * wave_multiplier as f32 * force as f32,
@@ -146,33 +175,38 @@ pub fn tower_shoot(
                     }
                 }
 
-                let (direction, speed, force, lifetime) = match tower_type {
-                    TowerType::Gun => (
-                        Some(target.1.translation() - target_offset),
-                        60.0 + speed_mod,
-                        1.0 + force_mod,
-                        Timer::from_seconds(1.5, TimerMode::Once),
-                    ),
-                    TowerType::Rocket => (
-                        None,
-                        10.0 + speed_mod,
-                        10.0 + force_mod,
-                        Timer::from_seconds(10.0, TimerMode::Once),
-                    ),
-                    TowerType::Sniper => (
-                        None,
-                        100.0 + speed_mod,
-                        2.0 + force_mod,
-                        Timer::from_seconds(9.0, TimerMode::Once),
-                    ),
-                };
+                let (direction, speed, force, lifetime, handle) =
+                    match tower_type {
+                        TowerType::Gun => (
+                            Some(target.1.translation() - target_offset),
+                            60.0 + speed_mod,
+                            1.0 + force_mod,
+                            Timer::from_seconds(1.5, TimerMode::Once),
+                            assets.bullet_scene.clone(),
+                        ),
+                        TowerType::Rocket => (
+                            None,
+                            10.0 + speed_mod,
+                            10.0 + force_mod,
+                            Timer::from_seconds(10.0, TimerMode::Once),
+                            assets.rocket_scene.clone(),
+                        ),
+                        TowerType::Sniper => (
+                            None,
+                            100.0 + speed_mod,
+                            2.0 + force_mod,
+                            Timer::from_seconds(9.0, TimerMode::Once),
+                            assets.sniper_bullet_scene.clone(),
+                        ),
+                    };
 
                 commands.entity(tower_ent).with_children(|commands| {
                     commands.spawn((
                         SceneBundle {
-                            scene: assets.bullet_scene.clone(),
+                            scene: handle,
                             transform: Transform::from_xyz(0.0, 0.0, 0.0)
-                                .with_scale(Vec3::new(4.0, 4.0, 4.0)),
+                                .with_scale(Vec3::new(4.0, 4.0, 4.0))
+                                .looking_at(-target.1.translation(), Vec3::Y),
                             ..default()
                         },
                         Lifetime { timer: lifetime },
@@ -188,6 +222,7 @@ pub fn tower_shoot(
                         },
                         Name::new("Bullet"),
                         PhysicsBundle::moving_entity().make_kinematic(),
+                        SideEffectBundle::from_tower(&tower),
                     ));
                 });
             }

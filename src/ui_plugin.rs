@@ -175,25 +175,34 @@ fn main_game_screen(
         }
     }
     egui::TopBottomPanel::bottom("bottom_panel")
-        .max_height(200.0)
-        .min_height(30.0)
+        .max_height(300.0)
+        .min_height(300.0)
         .show(ctx, |ui| {
             ui.heading("Towering side effect");
+            if matches!(ui_state.game_state, GameState::RunningWave) {
+                    ui.label("Wave running");
+                    ui.label(format!(
+                        "Remaining wave time: {:.2}",
+                        ui_state.wave_timer.remaining_secs()
+                    ));
+                }
 
             match ui_state.game_state {
-                GameState::TowerUpgrade => {
-                    ui.horizontal(|ui| {
-                        ui.allocate_ui(egui::Vec2::new(30.0, 30.0), |ui| {
-                            if ui.button("Run wave!").clicked() {
-                                ev_state_update_writer.send(
-                                    StateUpdateEvent::StartWave {
-                                        time_of_wave: 40.0,
-                                        spawn_interval: 1.5,
-                                    },
-                                );
-                            }
+                GameState::TowerUpgrade | GameState::RunningWave => {
+                    if !matches!(ui_state.game_state, GameState::RunningWave) {
+                        ui.horizontal(|ui| {
+                            ui.allocate_ui(egui::Vec2::new(30.0, 30.0), |ui| {
+                                if ui.button("Run wave!").clicked() {
+                                    ev_state_update_writer.send(
+                                        StateUpdateEvent::StartWave {
+                                            time_of_wave: 40.0,
+                                            spawn_interval: 1.5,
+                                        },
+                                    );
+                                }
+                            });
                         });
-                    });
+                    }
 
                     ui.horizontal(|ui| {
                         ui.allocate_ui(egui::Vec2::new(30.0, 30.0), |ui| {
@@ -241,13 +250,14 @@ fn main_game_screen(
                                                         ))
                                                         .clicked()
                                                     {
+                                                        let force: i32 = ui_state.force_number.parse().unwrap_or(1);
                                                         info!("Fired upgrade event");
                                                         ui_state.money_in_bank -= price;
                                                         ev_tower_build_writer.send(
                                                             TowerBuildEvent::Upgrade {
                                                                 entity,
-                                                                effect: upgrade_option,
-                                                                side_effect: get_side_effect(ui_state.waves_finished, ui_state.force_number.parse().unwrap_or(1)),
+                                                                effect: upgrade_option.set_force(force as f32),
+                                                                side_effect: get_side_effect(ui_state.waves_finished, force),
                                                             },
                                                         );
                                                         current_selection.entity = None;
@@ -304,13 +314,6 @@ fn main_game_screen(
                             ui.separator();
                         }
                     });
-                }
-                GameState::RunningWave => {
-                    ui.label("Wave running");
-                    ui.label(format!(
-                        "Remaining wave time: {:.2}",
-                        ui_state.wave_timer.remaining_secs()
-                    ));
                 }
                 GameState::GameWon => {
                     ui.label("You won");

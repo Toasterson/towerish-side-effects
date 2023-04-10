@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 
-use crate::tower_shoot;
+use crate::{tower_shoot, SideEffectBundle, TowerSideEffects};
 
 #[derive(Reflect, Component, Default)]
 #[reflect(Component)]
@@ -12,6 +12,7 @@ pub struct Lifetime {
 pub struct HitEvent {
     pub entity: Entity,
     pub force: f32,
+    pub side_effects: Vec<TowerSideEffects>,
 }
 
 #[derive(Reflect, Component, Default)]
@@ -33,18 +34,21 @@ pub fn projectile_plugin(app: &mut App) {
 
 fn projectile_collision_detection(
     mut commands: Commands,
-    projectile_query: Query<(Entity, &Projectile)>,
+    projectile_query: Query<(Entity, &Projectile, &SideEffectBundle)>,
     mut colliding_entities_query: Query<(Entity, &CollidingEntities)>,
     mut ev_hit_event: EventWriter<HitEvent>,
 ) {
     for (entity, colliding_entities) in colliding_entities_query.iter_mut() {
-        for (projectile, projectile_info) in projectile_query.iter() {
+        for (projectile, projectile_info, side_effects) in
+            projectile_query.iter()
+        {
             if colliding_entities.contains(projectile) {
                 debug!("Hit!");
                 commands.entity(projectile).despawn_recursive();
                 ev_hit_event.send(HitEvent {
                     entity,
                     force: projectile_info.force,
+                    side_effects: side_effects.side_effects.clone(),
                 });
             }
         }
@@ -76,6 +80,7 @@ fn move_projectile(
                 transform.translation += direction.normalize()
                     * projectile.speed
                     * time.delta_seconds();
+                transform.look_at(target_pos.1.translation(), Vec3::Y);
             } else {
                 commands.entity(projectile_ent).despawn_recursive();
             }

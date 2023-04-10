@@ -1,4 +1,6 @@
 use bevy::prelude::*;
+
+#[cfg(feature = "particles")]
 use bevy_vfx_bag::{
     post_processing::{lut::Lut, wave::Wave},
     BevyVfxBagPlugin,
@@ -22,17 +24,16 @@ pub fn graphics_plugin(app: &mut App) {
             impact: Entity::PLACEHOLDER,
             portal: Entity::PLACEHOLDER,
         });
+        app.add_system(test_luts)
+            .add_system(health_loss_effects)
+            .add_system(camera_effect_decay);
+
+        app.add_system(particle_system_events);
     }
-
-    app.add_system(test_luts)
-        .add_system(health_loss_effects)
-        .add_system(camera_effect_decay);
-
-    #[cfg(feature = "particles")]
-    app.add_system(particle_system_events);
 }
 
 // Cycle through some preset LUTs.
+#[cfg(feature = "particles")]
 fn test_luts(
     mut choice: Local<usize>,
     mut commands: Commands,
@@ -71,15 +72,14 @@ fn test_luts(
     }
 }
 
-#[cfg(feature = "particles")]
 #[derive(Reflect, PartialEq)]
 pub enum ParticleSystemType {
     Landing,
     MuzzleFlash,
     Impact,
+    Portal,
 }
 
-#[cfg(feature = "particles")]
 #[derive(Resource, Reflect)]
 pub struct CreateParticleSystem {
     pub system: ParticleSystemType,
@@ -171,12 +171,12 @@ fn setup_particle_systems(
         EffectAsset {
             name: "portal".to_string(),
             capacity: 32768,
-            spawner: Spawner::rate(5000.0.into()),
+            spawner: Spawner::rate(5000.0.into()).with_starts_active(false),
             ..Default::default()
         }
         .init(InitPositionCircleModifier {
             center: Vec3::ZERO,
-            axis: Vec3::Z,
+            axis: Vec3::Y,
             radius: 4.,
             dimension: ShapeDimension::Surface,
         })
@@ -186,7 +186,7 @@ fn setup_particle_systems(
         })
         .update(LinearDragModifier { drag: 2. })
         .update(RadialAccelModifier::constant(Vec3::ZERO, -6.0))
-        .update(TangentAccelModifier::constant(Vec3::ZERO, Vec3::Z, 30.))
+        .update(TangentAccelModifier::constant(Vec3::ZERO, Vec3::Y, 15.))
         .render(ColorOverLifetimeModifier {
             gradient: color_gradient1,
         })
@@ -197,14 +197,7 @@ fn setup_particle_systems(
     );
 
     particle_systems.portal = commands
-        .spawn((
-            Name::new("portal"),
-            ParticleEffectBundle {
-                effect: ParticleEffect::new(effect1),
-                transform: Transform::IDENTITY,
-                ..Default::default()
-            },
-        ))
+        .spawn((Name::new("portal"), ParticleEffectBundle::new(effect1)))
         .id();
 }
 
@@ -227,12 +220,17 @@ fn particle_system_events(
             ParticleSystemType::Landing => systems.landing,
             ParticleSystemType::MuzzleFlash => systems.muzzle_flash,
             ParticleSystemType::Impact => systems.impact,
+            ParticleSystemType::Portal => systems.portal,
         }) else {println!("ERROR 401"); return;};
         *transform = new_transform.clone();
         spawner.reset();
+        if !spawner.is_active() {
+            spawner.set_active(true);
+        }
     }
 }
 
+#[cfg(feature = "particles")]
 fn health_loss_effects(
     mut events: EventReader<StateUpdateEvent>,
     mut commands: Commands,
@@ -258,6 +256,7 @@ fn health_loss_effects(
     }
 }
 
+#[cfg(feature = "particles")]
 fn camera_effect_decay(
     mut commands: Commands,
     mut query: Query<(Entity, &mut Wave), With<Camera>>,
@@ -271,6 +270,7 @@ fn camera_effect_decay(
     }
 }
 
+#[cfg(feature = "particles")]
 pub fn portal_effect(
     mut effects: ResMut<Assets<EffectAsset>>,
 ) -> Handle<EffectAsset> {

@@ -18,7 +18,7 @@ impl PhysicsBundle {
             flags: ActiveEvents::COLLISION_EVENTS,
             active_collition_types: ActiveCollisionTypes::default()
                 | ActiveCollisionTypes::KINEMATIC_KINEMATIC,
-            collider: Collider::ball(0.5),
+            collider: Collider::ball(0.1),
             colliding_entities: CollidingEntities::default(),
             rigid_body: RigidBody::Dynamic,
             rotation_contraint: LockedAxes::ROTATION_LOCKED,
@@ -55,6 +55,11 @@ impl PhysicsBundle {
 
     pub fn set_velocity(mut self, velocity: Velocity) -> Self {
         self.velocity = velocity;
+        self
+    }
+
+    pub fn with_collider(mut self, collider: Collider) -> Self {
+        self.collider = collider;
         self
     }
 }
