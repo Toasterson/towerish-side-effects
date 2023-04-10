@@ -94,11 +94,11 @@ fn camera_controls(
         camera.translation -= left * time.delta_seconds() * speed;
     }
 
-    if keyboard.pressed(KeyCode::Q) {
+    if keyboard.pressed(KeyCode::E) {
         camera.rotate_axis(Vec3::Y, rotate_speed * time.delta_seconds());
     }
 
-    if keyboard.pressed(KeyCode::E) {
+    if keyboard.pressed(KeyCode::Q) {
         camera.rotate_axis(Vec3::Y, -rotate_speed * time.delta_seconds());
     }
 }
