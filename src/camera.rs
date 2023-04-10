@@ -8,7 +8,7 @@ use bevy_atmosphere::prelude::*;
 use bevy_mod_picking::PickingCameraBundle;
 
 pub fn camera_plugin(app: &mut App) {
-    #[cfg(featrue = "particles")]
+    #[cfg(feature = "particles")]
     app.add_plugin(AtmospherePlugin);
     app.add_startup_system(spawn_camera)
         .add_system(camera_controls);
@@ -28,10 +28,10 @@ fn spawn_camera(mut commands: Commands) {
         },
         Name::new("Camera"),
         BloomSettings {
-            intensity: 0.25,
+            // intensity: 0.25,
             ..Default::default()
         },
-        #[cfg(feature = "particle")]
+        #[cfg(feature = "particles")]
         AtmosphereCamera::default(),
         PickingCameraBundle::default(),
     ));
