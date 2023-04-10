@@ -185,8 +185,8 @@ fn setup_particle_systems(
             lifetime: Value::Uniform((0.6, 1.3)),
         })
         .update(LinearDragModifier { drag: 2. })
-        .update(RadialAccelModifier::constant(Vec3::ZERO, -6.0))
-        .update(TangentAccelModifier::constant(Vec3::ZERO, Vec3::Y, 15.))
+        .update(RadialAccelModifier::constant(Vec3::ZERO, 6.0))
+        .update(TangentAccelModifier::constant(Vec3::ZERO, Vec3::Z, 30.))
         .render(ColorOverLifetimeModifier {
             gradient: color_gradient1,
         })
