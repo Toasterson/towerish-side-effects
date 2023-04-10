@@ -196,12 +196,12 @@ fn health_loss_effects(
         > 0
     {
         commands.get_or_spawn(query.single()).insert(Wave {
+            waves_y: 0.,
             waves_x: 25.0,
-            waves_y: 25.0,
-            speed_x: 30.,
-            speed_y: 30.,
-            amplitude_x: 0.01,
-            amplitude_y: 0.03,
+            speed_y: 0.,
+            speed_x: 10.,
+            amplitude_y: 0.,
+            amplitude_x: 0.10,
         });
     }
 }
@@ -211,8 +211,8 @@ fn camera_effect_decay(
     mut query: Query<(Entity, &mut Wave), With<Camera>>,
 ) {
     for (entity, mut wave) in query.iter_mut() {
-    wave.amplitude_y *= 0.9;
     wave.amplitude_x *= 0.9;
+    wave.speed_x *= 0.95;
     if wave.amplitude_x < 0.001 {
         commands.entity(entity).remove::<Wave>();
     }
