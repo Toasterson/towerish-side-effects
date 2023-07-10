@@ -6,7 +6,7 @@ workspace = "../.."
 
 [dependencies]
 towerish_side_effects = { path = "../.." }
-bevy = "0.10"
+bevy = "0.11"
 web-sys = { version="0.3.61", features=["Document", "Window"] }
 yew = "0.19.3"
 stylist = { version= "0.12.1", features=["yew_integration"] }
